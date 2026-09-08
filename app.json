@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +19,28 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O LootScanner usa a câmera para fotografar o item achado e catalogá-lo."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O LootScanner acessa suas fotos para você escolher a imagem do item achado."
+        }
+      ]
+    ],
+    "scheme": "lootscanner",
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
