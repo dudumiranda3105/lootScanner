@@ -20,6 +20,7 @@ interface MuralRow {
   id: string;
   owner_id: string;
   finder_name: string | null;
+  catalog_id: string;
   name: string;
   category: string;
   rarity: string;
@@ -54,6 +55,7 @@ function rowToMuralItem(row: MuralRow): MuralItem {
     remoteId: row.id,
     ownerId: row.owner_id,
     finderName: row.finder_name ?? 'Caçador anônimo',
+    catalogId: row.catalog_id,
     name: row.name,
     category: row.category as CategoryId,
     rarity: row.rarity as RarityId,

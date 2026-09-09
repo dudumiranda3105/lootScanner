@@ -4,7 +4,8 @@ import React, { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Notice, TextField } from '../src/components/form';
-import { Body, Button, Card, Divider, Label, Title } from '../src/components/ui';
+import { ICON } from '../src/components/icons';
+import { Body, Button, Card, Divider, Icon, Label, Title } from '../src/components/ui';
 import { useAuth } from '../src/hooks/useAuth';
 import { useInventory } from '../src/hooks/useInventory';
 import { supabase } from '../src/services/supabase';
@@ -74,6 +75,10 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.conteudo} keyboardShouldPersistTaps="handled">
         <Card style={styles.cartao}>
+          <View style={styles.brasao}>
+            <Icon name="crown-outline" size={30} color={colors.gold} />
+          </View>
+
           <Label>{cadastrando ? 'Nova conta' : 'Bem-vindo de volta'}</Label>
           <Title>{cadastrando ? 'Criar caçador' : 'Entrar'}</Title>
           <Body>
@@ -86,6 +91,7 @@ export default function LoginScreen() {
           {cadastrando ? (
             <TextField
               label="Nome de caçador"
+              icon="account-outline"
               placeholder="Como você aparece no mural"
               value={nomeCacador}
               onChangeText={setNomeCacador}
@@ -95,6 +101,7 @@ export default function LoginScreen() {
 
           <TextField
             label="E-mail"
+            icon="email-outline"
             placeholder="voce@escola.edu.br"
             value={email}
             onChangeText={setEmail}
@@ -106,6 +113,7 @@ export default function LoginScreen() {
 
           <TextField
             label="Senha"
+            icon="lock-outline"
             placeholder="mínimo de 6 caracteres"
             value={senha}
             onChangeText={setSenha}
@@ -117,6 +125,7 @@ export default function LoginScreen() {
 
           <Button
             label={cadastrando ? 'Criar conta' : 'Entrar'}
+            icon={cadastrando ? 'account-plus-outline' : ICON.entrar}
             onPress={enviar}
             loading={enviando}
             disabled={!email.trim() || senha.length < 6}
@@ -148,5 +157,16 @@ const styles = StyleSheet.create({
   },
   cartao: {
     gap: spacing.md,
+  },
+  brasao: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    borderColor: colors.goldDim,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 62,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    width: 62,
   },
 });

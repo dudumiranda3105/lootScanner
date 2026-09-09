@@ -4,7 +4,8 @@ import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
 
 import { LootCard } from '../../src/components/LootCard';
 import { Loading, TextField } from '../../src/components/form';
-import { Body, Chip, EmptyState, Label } from '../../src/components/ui';
+import { ICON, IconName } from '../../src/components/icons';
+import { Chip, EmptyState, Label, Mono } from '../../src/components/ui';
 import { RARITIES, RARITY_ORDER } from '../../src/domain/rarity';
 import { RarityId } from '../../src/domain/types';
 import { useInventory } from '../../src/hooks/useInventory';
@@ -12,13 +13,14 @@ import { colors, spacing } from '../../src/theme/theme';
 
 type Filtro = 'todos' | 'guardado' | 'devolvido' | RarityId;
 
-const FILTROS: { id: Filtro; label: string; color?: string }[] = [
-  { id: 'todos', label: 'Tudo' },
-  { id: 'guardado', label: 'Guardados' },
-  { id: 'devolvido', label: 'Devolvidos', color: colors.success },
+const FILTROS: { id: Filtro; label: string; icon: IconName; color?: string }[] = [
+  { id: 'todos', label: 'Tudo', icon: 'view-grid-outline' },
+  { id: 'guardado', label: 'Guardados', icon: ICON.inventario },
+  { id: 'devolvido', label: 'Devolvidos', icon: ICON.devolver, color: colors.success },
   ...RARITY_ORDER.map((rarity) => ({
     id: rarity as Filtro,
     label: RARITIES[rarity].label,
+    icon: RARITIES[rarity].icon,
     color: RARITIES[rarity].color,
   })),
 ];
@@ -53,6 +55,7 @@ export default function InventarioScreen() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <TextField
+          icon={ICON.buscar}
           placeholder="Buscar por item, local ou observação…"
           value={busca}
           onChangeText={setBusca}
@@ -69,6 +72,7 @@ export default function InventarioScreen() {
             <Chip
               key={item.id}
               label={item.label}
+              icon={item.icon}
               selected={filtro === item.id}
               color={item.color}
               onPress={() => setFiltro(item.id)}
@@ -80,9 +84,9 @@ export default function InventarioScreen() {
           <Label>
             {visiveis.length} de {stats.total} itens
           </Label>
-          <Body style={styles.resumoXp}>
-            Nível {stats.level} · {stats.xp} XP
-          </Body>
+          <Mono style={styles.resumoXp}>
+            Nv {stats.level} · {stats.xp} XP
+          </Mono>
         </View>
       </View>
 
@@ -90,22 +94,23 @@ export default function InventarioScreen() {
         data={visiveis}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.lista}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <LootCard
             item={item}
+            index={index}
             onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
           />
         )}
         ListEmptyComponent={
           items.length === 0 ? (
             <EmptyState
-              emblem="🎒"
+              icon={ICON.vazioInventario}
               title="Inventário vazio"
               description="Vá até a aba Escanear e fotografe o primeiro objeto achado para começar a coleção."
             />
           ) : (
             <EmptyState
-              emblem="🔍"
+              icon={ICON.nadaEncontrado}
               title="Nada por aqui"
               description="Nenhum item bate com essa busca ou filtro."
             />
@@ -137,8 +142,6 @@ const styles = StyleSheet.create({
   },
   resumoXp: {
     color: colors.gold,
-    fontSize: 12,
-    fontWeight: '700',
   },
   lista: {
     gap: spacing.md,

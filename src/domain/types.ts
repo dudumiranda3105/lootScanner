@@ -1,3 +1,5 @@
+import type { IconName } from '../components/icons';
+
 export type RarityId = 'comum' | 'incomum' | 'raro' | 'epico' | 'lendario';
 
 export type CategoryId =
@@ -14,6 +16,8 @@ export interface CatalogEntry {
   name: string;
   category: CategoryId;
   emblem: string;
+  /** Ícone vetorial do item (MaterialCommunityIcons). */
+  icon: IconName;
   /** Rótulos que um classificador de imagem costuma devolver para este item. */
   keywords: string[];
   /** Sobrepõe a raridade padrão da categoria (ex.: notebook é lendário). */
@@ -57,6 +61,8 @@ export interface MuralItem {
   ownerId: string;
   /** Nome de caçador de quem achou o item. */
   finderName: string;
+  /** Id no catalogo — usado para achar o ícone do item. */
+  catalogId: string;
   name: string;
   category: CategoryId;
   rarity: RarityId;

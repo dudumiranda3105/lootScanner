@@ -178,7 +178,7 @@ src/
   domain/                   tipos, raridades, catálogo de 35 itens
   hooks/                    useInventory (SQLite), useAuth (Supabase)
   services/                 supabase, sync, vision (mock), photos
-  components/               ui, form, LootCard
+  components/               ui, form, icons, LootCard
   theme/                    paleta escura estilo menu de RPG
 
 supabase/schema.sql         script para rodar no SQL Editor do Supabase

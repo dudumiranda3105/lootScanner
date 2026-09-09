@@ -1,3 +1,4 @@
+import type { IconName } from '../components/icons';
 import { CategoryId, RarityId } from './types';
 
 export interface RarityDef {
@@ -9,6 +10,7 @@ export interface RarityDef {
   /** Fundo translúcido usado nos cards e selos. */
   tint: string;
   xp: number;
+  icon: IconName;
 }
 
 export const RARITIES: Record<RarityId, RarityDef> = {
@@ -19,6 +21,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#9AA0C0',
     tint: 'rgba(154,160,192,0.14)',
     xp: 10,
+    icon: 'circle-outline',
   },
   incomum: {
     id: 'incomum',
@@ -27,6 +30,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#4BC58A',
     tint: 'rgba(75,197,138,0.14)',
     xp: 20,
+    icon: 'hexagon-outline',
   },
   raro: {
     id: 'raro',
@@ -35,6 +39,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#4C8DE2',
     tint: 'rgba(76,141,226,0.16)',
     xp: 40,
+    icon: 'rhombus-outline',
   },
   epico: {
     id: 'epico',
@@ -43,6 +48,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#A45CE8',
     tint: 'rgba(164,92,232,0.16)',
     xp: 70,
+    icon: 'star-four-points-outline',
   },
   lendario: {
     id: 'lendario',
@@ -51,6 +57,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#E8B84B',
     tint: 'rgba(232,184,75,0.18)',
     xp: 120,
+    icon: 'diamond-stone',
   },
 };
 

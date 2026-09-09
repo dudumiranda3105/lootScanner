@@ -36,7 +36,10 @@
         {
           "photosPermission": "O LootScanner acessa suas fotos para você escolher a imagem do item achado."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-splash-screen",
+      "expo-font"
     ],
     "scheme": "lootscanner",
     "experiments": {
