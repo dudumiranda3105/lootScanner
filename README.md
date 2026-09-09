@@ -73,7 +73,18 @@ No painel do Supabase, em **Project Settings**, copie:
 > dados são as políticas de RLS do `schema.sql`: qualquer pessoa logada **lê** o mural (essa é a
 > função dele), mas só o dono **escreve** nos próprios itens.
 
-### 4. Iniciar
+### 4. Conferir se deu certo
+
+```bash
+npm run check:supabase
+```
+
+Esse comando testa a configuração sem precisar abrir o app: valida o `.env`, confirma que o
+projeto responde e aceita a chave, verifica se o `schema.sql` criou as tabelas, a view e as
+políticas de RLS, e avisa se o **"Confirm email"** ainda estiver ligado. Cada falha vem com o
+caminho exato no painel para corrigir.
+
+### 5. Iniciar
 
 ```bash
 npx expo start --clear
@@ -176,6 +187,8 @@ supabase/schema.sql         script para rodar no SQL Editor do Supabase
 ---
 
 ## Problemas comuns
+
+Antes de investigar na mão, rode `npm run check:supabase` — ele costuma apontar a causa direto.
 
 | Sintoma | Causa provável |
 |---|---|
