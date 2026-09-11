@@ -97,3 +97,24 @@ export const CATEGORY_ORDER: CategoryId[] = [
 export function rarityOf(category: CategoryId, override?: RarityId): RarityId {
   return override ?? CATEGORIES[category].rarity;
 }
+
+/**
+ * Aplica a raridade sugerida pela IA, mas no máximo um degrau acima ou abaixo
+ * da raridade do catálogo.
+ *
+ * A IA enxerga o estado real do objeto — um notebook surrado não é a mesma coisa
+ * que um lacrado —, e deixá-la opinar é o que torna o escaneamento divertido.
+ * Mas dar controle total quebraria duas coisas: a coleção deixaria de ser
+ * consistente (o mesmo tipo de item viria com raridades diferentes a cada foto)
+ * e o XP viraria sorteio. O limite de um degrau mantém as duas pontas.
+ */
+export function clampRarity(base: RarityId, sugerida?: RarityId | null): RarityId {
+  if (!sugerida) return base;
+
+  const iBase = RARITY_ORDER.indexOf(base);
+  const iSugerida = RARITY_ORDER.indexOf(sugerida);
+  if (iBase < 0 || iSugerida < 0) return base;
+
+  const limitada = Math.min(Math.max(iSugerida, iBase - 1), iBase + 1);
+  return RARITY_ORDER[limitada];
+}

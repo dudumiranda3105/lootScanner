@@ -41,7 +41,7 @@ import {
   Title,
 } from '../../src/components/ui';
 import { catalogRarity, getCatalogEntry } from '../../src/domain/catalog';
-import { CATEGORIES, RARITIES } from '../../src/domain/rarity';
+import { CATEGORIES, RARITIES, clampRarity } from '../../src/domain/rarity';
 import { VisionResult } from '../../src/domain/types';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useInventory } from '../../src/hooks/useInventory';
@@ -98,7 +98,7 @@ export default function EscanearScreen() {
     setEtapa('confirmar');
 
     // Itens raros merecem uma vibração mais forte — é a graça do "loot".
-    const raridade = catalogRarity(entrada.id);
+    const raridade = clampRarity(catalogRarity(entrada.id), encontrado.rarityHint);
     void Haptics.notificationAsync(
       raridade === 'lendario' || raridade === 'epico'
         ? Haptics.NotificationFeedbackType.Success
@@ -133,6 +133,7 @@ export default function EscanearScreen() {
         note: nota,
         confidence: resultado?.guesses[0]?.confidence ?? 0,
         shared: publicar,
+        rarity: clampRarity(catalogRarity(catalogId), resultado?.rarityHint),
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       reiniciar();
@@ -182,7 +183,8 @@ export default function EscanearScreen() {
 
   if (etapa === 'confirmar') {
     const entrada = getCatalogEntry(catalogId);
-    const raridade = catalogRarity(catalogId);
+    // A IA opina sobre a raridade, mas só pode mover um degrau a partir do catálogo.
+    const raridade = clampRarity(catalogRarity(catalogId), resultado?.rarityHint);
     const def = RARITIES[raridade];
     const confianca = Math.round((resultado?.guesses[0]?.confidence ?? 0) * 100);
 
@@ -230,6 +232,10 @@ export default function EscanearScreen() {
                 </Mono>
               </View>
             </View>
+
+            {resultado?.flavor ? (
+              <Text style={[styles.sabor, { color: def.color }]}>“{resultado.flavor}”</Text>
+            ) : null}
 
             {alternativas.length > 0 ? (
               <>
@@ -567,6 +573,11 @@ const styles = StyleSheet.create({
   },
   achadoCategoria: {
     fontSize: 11,
+  },
+  sabor: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 19,
   },
   alternativas: {
     flexDirection: 'row',

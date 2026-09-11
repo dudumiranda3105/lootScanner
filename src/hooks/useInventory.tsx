@@ -27,6 +27,11 @@ export interface NewLootDraft {
   confidence: number;
   /** Publicar no mural coletivo assim que houver login e internet. */
   shared: boolean;
+  /**
+   * Raridade final, já resolvida pela tela de escaneamento (catálogo mais a
+   * sugestão da IA, limitada por `clampRarity`). Sem isso, usa só o catálogo.
+   */
+  rarity?: RarityId;
 }
 
 export interface InventoryStats {
@@ -107,7 +112,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         catalogId: entry.id,
         name: draft.name?.trim() || entry.name,
         category: entry.category,
-        rarity: catalogRarity(entry.id),
+        rarity: draft.rarity ?? catalogRarity(entry.id),
         emblem: entry.emblem,
         photoUri,
         foundAt: draft.foundAt.trim(),

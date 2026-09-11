@@ -1,7 +1,6 @@
-import { CATALOG, COLLECTIBLES, getCatalogEntry } from '../domain/catalog';
-import { RarityId } from '../domain/types';
-import { VisionResult } from '../domain/types';
-import { catalogRarity } from '../domain/catalog';
+import { CATALOG, COLLECTIBLES, catalogRarity, getCatalogEntry } from '../domain/catalog';
+import { RarityId, VisionResult } from '../domain/types';
+import { isSupabaseConfigured, requireSupabase } from './supabase';
 
 export interface VisionInput {
   uri: string;
@@ -188,20 +187,78 @@ export function createRemoteVisionProvider(endpoint: string): VisionProvider {
  * Seleção do provedor ativo
  * ------------------------------------------------------------------ */
 
+/**
+ * Provedor de verdade: manda a foto para a Edge Function `identificar-loot`,
+ * que chama o OpenRouter. A chave da IA vive lá, como secret do projeto — nunca
+ * dentro do app.
+ *
+ * O `functions.invoke` já anexa o JWT do usuário logado, e a função exige um
+ * JWT válido. Ou seja: só quem entrou na conta consegue gastar a chave.
+ */
+export const supabaseVisionProvider: VisionProvider = {
+  id: 'supabase',
+
+  async identify(input) {
+    if (!input.base64) throw new Error('A identificação por IA precisa da foto em base64.');
+    const client = requireSupabase();
+
+    const { data, error } = await client.functions.invoke('identificar-loot', {
+      body: { imagemBase64: input.base64, mimeType: 'image/jpeg' },
+    });
+
+    if (error) throw error;
+    if (data?.erro) throw new Error(String(data.erro));
+
+    const guesses = Array.isArray(data?.guesses) ? data.guesses : [];
+    if (guesses.length === 0) throw new Error('A IA não devolveu nenhum palpite.');
+
+    return {
+      provider: String(data.provider ?? 'supabase'),
+      guesses,
+      rarityHint: (data.rarityHint ?? null) as RarityId | null,
+      flavor: typeof data.flavor === 'string' ? data.flavor : undefined,
+    };
+  },
+};
+
+/* ------------------------------------------------------------------ *
+ * Seleção do provedor ativo
+ * ------------------------------------------------------------------ */
+
 const REMOTE_ENDPOINT = process.env.EXPO_PUBLIC_VISION_ENDPOINT;
+
+/** `true` quando o app deve tentar a IA de verdade antes de cair no simulado. */
+export const visionUsaIA = Boolean(REMOTE_ENDPOINT) || isSupabaseConfigured;
 
 export const visionProvider: VisionProvider = REMOTE_ENDPOINT
   ? createRemoteVisionProvider(REMOTE_ENDPOINT)
-  : mockVisionProvider;
+  : isSupabaseConfigured
+    ? supabaseVisionProvider
+    : mockVisionProvider;
 
-/** Executa a identificação e nunca rejeita: em caso de falha devolve "item misterioso". */
+/**
+ * Executa a identificação e nunca rejeita.
+ *
+ * Se a IA falhar — sem internet, sem login, chave não configurada, função fora
+ * do ar — cai no provedor simulado em vez de devolver "item misterioso". O
+ * fluxo do app continua inteiro e a demonstração nunca trava por causa da rede.
+ */
 export async function identifyItem(input: VisionInput): Promise<VisionResult> {
   try {
     const result = await visionProvider.identify(input);
     if (result.guesses.length > 0) return result;
   } catch (error) {
-    console.warn('[vision] falha ao identificar item:', error);
+    console.warn('[vision] a identificação por IA falhou, usando o simulado:', error);
   }
+
+  if (visionProvider.id !== mockVisionProvider.id) {
+    try {
+      return await mockVisionProvider.identify(input);
+    } catch (error) {
+      console.warn('[vision] o provedor simulado também falhou:', error);
+    }
+  }
+
   return { provider: visionProvider.id, guesses: [{ catalogId: 'desconhecido', confidence: 0 }] };
 }
 

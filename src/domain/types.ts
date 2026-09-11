@@ -86,4 +86,12 @@ export interface VisionResult {
   guesses: VisionGuess[];
   /** Identificador do provedor que produziu o resultado (para depuração). */
   provider: string;
+  /**
+   * Raridade sugerida pelo modelo. É só uma sugestão: o app limita o quanto ela
+   * pode se afastar da raridade do catálogo (veja `clampRarity`), senão o mesmo
+   * objeto valeria XP diferente a cada escaneamento.
+   */
+  rarityHint?: RarityId | null;
+  /** Frase curta, no tom de RPG, descrevendo o objeto. Só enfeite. */
+  flavor?: string;
 }

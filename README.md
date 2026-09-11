@@ -22,10 +22,10 @@ A camada de gamificação — raridade, inventário, XP, coleção — não muda
 Ela existe para tornar o ato de registrar mais engajante, o que aumenta a chance de as pessoas
 realmente cadastrarem o que encontram.
 
-> A identificação por **visão computacional** entra no 2º bimestre. Nesta versão, o serviço em
-> [`src/services/vision.ts`](src/services/vision.ts) é um provedor simulado determinístico (a mesma
-> foto sempre devolve o mesmo item), já escrito atrás da interface `VisionProvider` — trocar pelo
-> classificador real não exige mexer em nenhuma tela.
+> A identificação por **IA de visão** já está implementada — veja
+> [Identificação por IA](#identificação-por-ia-opcional). Sem ela configurada, o app usa um
+> provedor simulado determinístico (a mesma foto sempre devolve o mesmo item), então o fluxo
+> funciona de ponta a ponta offline.
 
 ---
 
@@ -146,6 +146,73 @@ A sincronização ([`src/services/sync.ts`](src/services/sync.ts)) faz, nesta or
 publicados pendentes, remove do servidor os que foram despublicados, apaga os excluídos (usando
 "lápides", para nada sumir antes de o servidor confirmar) e, por fim, baixa o mural para o cache.
 Ela **nunca lança exceção** — sem rede ou sem login, devolve o motivo e o app segue offline.
+
+---
+
+## Identificação por IA (opcional)
+
+O app aponta a câmera para o objeto e a IA diz **o que é** e **quão raro parece**. Sem isso
+configurado, nada quebra: o provedor simulado assume e o fluxo continua idêntico.
+
+### Por que uma Edge Function
+
+A chave da IA **não pode ficar no app**. Qualquer coisa em `EXPO_PUBLIC_*` vai dentro do bundle, e
+quem tiver o APK consegue extrair — com a conta correndo por sua parte. Por isso a chamada passa
+por [`supabase/functions/identificar-loot`](supabase/functions/identificar-loot/index.ts): a chave
+vive lá como secret do projeto, e o Supabase só aceita chamadas com um JWT válido, então apenas
+quem está logado no app consegue gastá-la.
+
+```
+app  ──foto (base64) + JWT──▶  Edge Function  ──chave no servidor──▶  OpenRouter
+                                     │
+                                     └──▶  { item, confiança, raridade, frase }
+```
+
+### Configurar
+
+1. Crie uma chave em [openrouter.ai](https://openrouter.ai) e ponha alguns dólares de crédito
+   (cada escaneamento custa por volta de **US$ 0,006** no modelo padrão).
+2. Faça login no CLI do Supabase e ligue ao seu projeto:
+
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref SEU_PROJECT_REF
+   ```
+
+3. Guarde a chave como secret e publique a função:
+
+   ```bash
+   npx supabase secrets set OPENROUTER_API_KEY=sk-or-...
+   npx supabase functions deploy identificar-loot
+   ```
+
+Pronto — o app passa a usar a IA automaticamente assim que você estiver logado. Para trocar de
+modelo, use outro slug com visão do OpenRouter:
+
+```bash
+npx supabase secrets set OPENROUTER_MODEL=google/gemini-2.5-flash-lite
+```
+
+### Como a raridade é decidida
+
+A IA **opina**, mas não manda sozinha. A raridade base vem da categoria do item no catálogo, e a
+sugestão da IA só pode movê-la **um degrau** para cima ou para baixo
+([`clampRarity`](src/domain/rarity.ts)).
+
+O motivo: a IA enxerga o estado real do objeto — um notebook surrado não é a mesma coisa que um
+lacrado — e deixá-la opinar é o que torna o escaneamento divertido. Mas com controle total, o mesmo
+tipo de item viria com raridades diferentes a cada foto: a coleção deixaria de ser consistente e o
+XP viraria sorteio. O limite de um degrau mantém as duas pontas.
+
+### Detalhes que importam
+
+- **Nada do modelo entra sem validação.** O id do item é conferido contra a lista do catálogo, a
+  confiança é presa entre 0 e 1 e a raridade precisa ser um dos cinco valores conhecidos. Resposta
+  fora do formato vira "item misterioso", não um erro na tela.
+- **Falha suave.** Sem internet, sem login ou com a função fora do ar, o app cai no provedor
+  simulado — a demonstração nunca trava por causa da rede.
+- **O catálogo da função é gerado**, não copiado na mão: `npm run gen:catalogo` extrai os 36 itens
+  de `src/domain/catalog.ts`. Rode depois de mexer no catálogo.
 
 ---
 

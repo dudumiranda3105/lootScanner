@@ -42,7 +42,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "check:supabase": "node scripts/check-supabase.mjs",
-    "start:mcp": "cross-env EXPO_UNSTABLE_MCP_SERVER=1 expo start"
+    "start:mcp": "cross-env EXPO_UNSTABLE_MCP_SERVER=1 expo start",
+    "gen:catalogo": "node scripts/gen-catalogo-edge.mjs"
   },
   "private": true
 }
