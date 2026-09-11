@@ -47,3 +47,4 @@ yarn-error.*
 # Supabase CLI (temporarios)
 supabase/.temp/
 supabase/.branches/
+supabase/.env
