@@ -13,11 +13,9 @@
  *   npx supabase secrets set OPENROUTER_API_KEY=sk-or-...
  *   npx supabase functions deploy identificar-loot
  *
- * Por padrão o Supabase só aceita chamadas com um JWT válido, então apenas
- * usuários logados no app conseguem gastar a chave.
+ * A função exige um usuário logado de verdade — não basta um JWT válido, porque
+ * a chave publishable do projeto também é um. Veja a checagem no handler.
  */
-
-import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { CATALOGO, IDS_VALIDOS } from './catalogo.ts';
 
@@ -101,22 +99,25 @@ Deno.serve(async (req: Request) => {
    * dentro do app — qualquer um extrai do APK e chamaria esta função à vontade,
    * gastando o crédito do OpenRouter.
    *
-   * Por isso trocamos o token por um usuário: `getUser` só devolve alguém
-   * quando o Authorization carrega o JWT de uma sessão real. Com a chave
-   * publishable no lugar, ele falha — que é o que queremos.
+   * Por isso perguntamos ao endpoint de autenticação quem é o portador do
+   * token. Ele só responde 200 quando o Authorization carrega o JWT de uma
+   * sessão real; com a chave publishable no lugar, devolve erro.
    */
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
 
   if (!token) return json({ erro: 'Entre na sua conta para usar a identificação por IA.' }, 401);
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-  );
+  // Uma requisição só, sem SDK: importar o supabase-js inteiro aqui custa caro
+  // no cold start e é muito mais do que precisamos para checar um usuário.
+  const usuario = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, {
+    headers: {
+      apikey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Authorization: `Bearer ${token}`,
+    },
+    signal: AbortSignal.timeout(8_000),
+  }).catch(() => null);
 
-  const { data: usuario, error: erroAuth } = await supabase.auth.getUser(token);
-
-  if (erroAuth || !usuario?.user) {
+  if (!usuario?.ok) {
     return json({ erro: 'Entre na sua conta para usar a identificação por IA.' }, 401);
   }
 
@@ -133,9 +134,10 @@ Deno.serve(async (req: Request) => {
 
   if (!imagemBase64) return json({ erro: 'Faltou "imagemBase64".' }, 400);
 
-  // ~4 MB de base64. Acima disso o modelo cobra caro e o upload arrasta.
-  if (imagemBase64.length > 4_000_000) {
-    return json({ erro: 'Imagem grande demais. Reduza a qualidade da foto.' }, 413);
+  // O app reduz a foto para ~768px antes de enviar (~60-120 KB de base64).
+  // Este teto existe para quem chamar a função por fora.
+  if (imagemBase64.length > 1_500_000) {
+    return json({ erro: 'Imagem grande demais — reduza antes de enviar.' }, 413);
   }
 
   try {
@@ -170,6 +172,9 @@ Deno.serve(async (req: Request) => {
         // em vez de cair num que ignora e devolve texto solto.
         provider: { require_parameters: true },
       }),
+      // Sem teto, uma chamada pendurada segura a função até o limite do runtime
+      // — e o app fica girando junto, sem nunca receber resposta.
+      signal: AbortSignal.timeout(25_000),
     });
 
     if (!resposta.ok) {

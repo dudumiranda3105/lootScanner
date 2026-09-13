@@ -227,6 +227,19 @@ export const supabaseVisionProvider: VisionProvider = {
  * Seleção do provedor ativo
  * ------------------------------------------------------------------ */
 
+/** Teto para a identificação por IA. Acima disso, o simulado assume. */
+const TEMPO_LIMITE_MS = 30_000;
+
+/** Rejeita se a promessa não resolver a tempo. O trabalho em si segue solto. */
+function comPrazo<T>(promessa: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promessa,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Tempo esgotado (${ms / 1000}s).`)), ms),
+    ),
+  ]);
+}
+
 const REMOTE_ENDPOINT = process.env.EXPO_PUBLIC_VISION_ENDPOINT;
 
 /** `true` quando o app deve tentar a IA de verdade antes de cair no simulado. */
@@ -247,7 +260,10 @@ export const visionProvider: VisionProvider = REMOTE_ENDPOINT
  */
 export async function identifyItem(input: VisionInput): Promise<VisionResult> {
   try {
-    const result = await visionProvider.identify(input);
+    // O teto é obrigatório: `functions.invoke` não tem timeout próprio, e uma
+    // chamada que nunca volta deixaria a tela de "analisando" girando para
+    // sempre — sem erro no console e sem saída para o usuário.
+    const result = await comPrazo(visionProvider.identify(input), TEMPO_LIMITE_MS);
     if (result.guesses.length > 0) return result;
   } catch (error) {
     console.warn('[vision] a identificação por IA falhou, usando o simulado:', error);

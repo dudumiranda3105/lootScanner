@@ -45,6 +45,7 @@ import { CATEGORIES, RARITIES, clampRarity } from '../../src/domain/rarity';
 import { VisionResult } from '../../src/domain/types';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useInventory } from '../../src/hooks/useInventory';
+import { reduzirParaIA } from '../../src/services/imagem';
 import { identifyItem } from '../../src/services/vision';
 import { colors, font, glow, radius, spacing } from '../../src/theme/theme';
 
@@ -84,10 +85,20 @@ export default function EscanearScreen() {
     }, [reiniciar]),
   );
 
-  /** Foto capturada -> identificação -> tela de confirmação. */
-  const analisar = useCallback(async (uri: string, base64: string | null) => {
+  /** Foto capturada -> redução -> identificação -> tela de confirmação. */
+  const analisar = useCallback(async (uri: string) => {
     setFoto(uri);
     setEtapa('analisando');
+
+    // A IA recebe uma versão de ~768px; o inventário guarda a foto original.
+    // Mandar a resolução cheia não melhora o reconhecimento e transforma o
+    // corpo do POST em megabytes, o que trava o upload no celular.
+    let base64: string | null = null;
+    try {
+      base64 = (await reduzirParaIA(uri)).base64;
+    } catch (error) {
+      console.warn('[scan] não foi possível reduzir a foto:', error);
+    }
 
     const encontrado = await identifyItem({ uri, base64 });
     const entrada = getCatalogEntry(encontrado.guesses[0].catalogId);
@@ -108,18 +119,17 @@ export default function EscanearScreen() {
 
   const fotografar = useCallback(async () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const captura = await camera.current?.takePictureAsync({ quality: 0.6, base64: true });
-    if (captura?.uri) await analisar(captura.uri, captura.base64 ?? null);
+    const captura = await camera.current?.takePictureAsync({ quality: 0.7 });
+    if (captura?.uri) await analisar(captura.uri);
   }, [analisar]);
 
   const escolherDaGaleria = useCallback(async () => {
     const escolha = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.6,
-      base64: true,
+      quality: 0.7,
     });
     const asset = escolha.assets?.[0];
-    if (!escolha.canceled && asset) await analisar(asset.uri, asset.base64 ?? null);
+    if (!escolha.canceled && asset) await analisar(asset.uri);
   }, [analisar]);
 
   const salvar = useCallback(async () => {
@@ -318,8 +328,11 @@ export default function EscanearScreen() {
 
   return (
     <View style={styles.tela}>
-      <CameraView ref={camera} style={styles.camera} facing="back">
-        <View style={styles.mira}>
+      {/* O <CameraView> nao aceita filhos — a mira vai por cima, em camada propria. */}
+      <View style={styles.camera}>
+        <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" />
+
+        <View style={[StyleSheet.absoluteFill, styles.mira]} pointerEvents="none">
           <View style={styles.miraQuadro}>
             <Canto style={styles.cantoTL} />
             <Canto style={styles.cantoTR} />
@@ -328,7 +341,7 @@ export default function EscanearScreen() {
           </View>
           <Text style={styles.miraTexto}>Enquadre o objeto achado</Text>
         </View>
-      </CameraView>
+      </View>
 
       <View style={styles.controles}>
         <Pressable
