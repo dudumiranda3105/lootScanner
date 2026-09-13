@@ -191,12 +191,27 @@ app  ──foto (base64) + JWT──▶  Edge Function  ──chave no servidor�
    npx supabase functions deploy identificar-loot
    ```
 
-Pronto — o app passa a usar a IA automaticamente assim que você estiver logado. Para trocar de
-modelo, use outro slug com visão do OpenRouter:
+Pronto — o app passa a usar a IA automaticamente **assim que você estiver logado** (sem login a
+função responde 401, por segurança).
+
+### Sem crédito? Use um modelo gratuito
+
+O OpenRouter tem modelos com visão de graça, com slug terminado em `:free`:
 
 ```bash
-npx supabase secrets set OPENROUTER_MODEL=google/gemini-2.5-flash-lite
+npx supabase secrets set OPENROUTER_MODEL=nex-agi/nex-n2.5-pro:free
 ```
+
+Alternativas: `dots-studio/dots-3-note-preview:free`, `google/gemma-4-31b-it:free`,
+`inclusionai/ling-3.0-flash-vl:free`. Depois de trocar, republique a função.
+
+A contrapartida dos gratuitos é o limite diário de requisições e o reconhecimento geralmente menos
+preciso que o dos modelos pagos. Se o limite estourar no meio da apresentação, o app cai no
+identificador simulado e a demonstração continua.
+
+> A função **não depende** de o modelo suportar `structured_outputs`: o prompt pede o JSON
+> explicitamente e a resposta passa por um parser tolerante, que aceita JSON puro, cercado por
+> ```` ```json ```` ou com frases em volta. É isso que permite usar qualquer modelo com visão.
 
 ### Como a raridade é decidida
 

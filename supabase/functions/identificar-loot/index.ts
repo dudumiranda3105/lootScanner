@@ -64,7 +64,12 @@ Regras:
   "lendario". O aplicativo ainda ajusta esse valor, então dê sua leitura sincera.
 - "sabor" é UMA frase curta em português, no tom bem-humorado de um jogo de RPG,
   descrevendo o objeto como se fosse um item de loot. Sem emoji. Máximo 100
-  caracteres. Descreva o que você realmente vê na foto, não invente detalhes.`;
+  caracteres. Descreva o que você realmente vê na foto, não invente detalhes.
+
+Responda APENAS com um objeto JSON, sem texto antes ou depois e sem cercas de
+código, exatamente nesta forma:
+
+{"item":"fone","confianca":0.82,"alternativas":["carregador"],"raridade":"raro","sabor":"..."}`;
 
 const ESQUEMA = {
   type: 'object',
@@ -78,6 +83,27 @@ const ESQUEMA = {
   required: ['item', 'confianca', 'alternativas', 'raridade', 'sabor'],
   additionalProperties: false,
 };
+
+/**
+ * Extrai o objeto JSON da resposta.
+ *
+ * Com `response_format` honrado, o conteúdo já vem JSON puro. Sem isso, modelos
+ * costumam embrulhar em cercas de código ou emendar uma frase antes. Aqui a
+ * cerca é removida e, se ainda sobrar texto, pegamos do primeiro `{` ao último
+ * `}` — o suficiente para os dois casos.
+ */
+function extrairJson(texto: string): unknown {
+  const limpo = texto.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+
+  try {
+    return JSON.parse(limpo);
+  } catch {
+    const inicio = limpo.indexOf('{');
+    const fim = limpo.lastIndexOf('}');
+    if (inicio === -1 || fim <= inicio) throw new Error('A resposta do modelo não continha JSON.');
+    return JSON.parse(limpo.slice(inicio, fim + 1));
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * Handler
@@ -164,13 +190,15 @@ Deno.serve(async (req: Request) => {
             ],
           },
         ],
+        // Melhor esforço: os modelos que suportam devolvem JSON garantido. Os que
+        // não suportam ignoram este campo — e aí vale a instrução do prompt, com
+        // `extrairJson` limpando o que vier em volta. Não usamos
+        // `provider.require_parameters`, que recusaria o roteamento para todo
+        // modelo sem structured_outputs (a maioria dos gratuitos).
         response_format: {
           type: 'json_schema',
           json_schema: { name: 'loot', strict: true, schema: ESQUEMA },
         },
-        // Só roteia para provedores que realmente aceitam response_format,
-        // em vez de cair num que ignora e devolve texto solto.
-        provider: { require_parameters: true },
       }),
       // Sem teto, uma chamada pendurada segura a função até o limite do runtime
       // — e o app fica girando junto, sem nunca receber resposta.
@@ -189,19 +217,20 @@ Deno.serve(async (req: Request) => {
       return json({ erro: 'Resposta do modelo veio vazia.' }, 502);
     }
 
-    const bruto = JSON.parse(conteudo);
+    const bruto = extrairJson(conteudo) as Record<string, unknown>;
 
     /* ---- Nada do modelo entra sem validação ---- */
 
-    const item = IDS_VALIDOS.has(bruto.item) ? bruto.item : 'desconhecido';
+    const item =
+      typeof bruto.item === 'string' && IDS_VALIDOS.has(bruto.item) ? bruto.item : 'desconhecido';
 
     const confianca = Math.max(0, Math.min(1, Number(bruto.confianca) || 0));
 
-    const alternativas: string[] = Array.isArray(bruto.alternativas)
-      ? bruto.alternativas.filter((a: unknown) => typeof a === 'string' && IDS_VALIDOS.has(a) && a !== item).slice(0, 2)
-      : [];
+    const alternativas = (Array.isArray(bruto.alternativas) ? bruto.alternativas : [])
+      .filter((a): a is string => typeof a === 'string' && IDS_VALIDOS.has(a) && a !== item)
+      .slice(0, 2);
 
-    const raridade: Raridade | null = RARIDADES.includes(bruto.raridade)
+    const raridade: Raridade | null = RARIDADES.includes(bruto.raridade as Raridade)
       ? (bruto.raridade as Raridade)
       : null;
 
