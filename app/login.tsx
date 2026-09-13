@@ -2,6 +2,7 @@ import { Redirect, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Notice, TextField } from '../src/components/form';
 import { ICON } from '../src/components/icons';
@@ -17,6 +18,8 @@ type Modo = 'entrar' | 'cadastrar';
 export default function LoginScreen() {
   const db = useSQLiteContext();
   const { signIn, signUp, configured, session } = useAuth();
+  // Tela cheia e sem cabeçalho: a folga do sistema fica por nossa conta.
+  const insets = useSafeAreaInsets();
   const { refresh } = useInventory();
 
   const [modo, setModo] = useState<Modo>('entrar');
@@ -77,7 +80,13 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.tela}
     >
-      <ScrollView contentContainerStyle={styles.conteudo} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.conteudo,
+          { paddingTop: spacing.lg + insets.top, paddingBottom: spacing.lg + insets.bottom },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <Card style={styles.cartao}>
           <View style={styles.brasao}>
             <Icon name="crown-outline" size={30} color={colors.gold} />

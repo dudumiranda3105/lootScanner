@@ -15,6 +15,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   FadeIn,
@@ -56,6 +57,7 @@ export default function EscanearScreen() {
   const { configured } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
+  const insets = useSafeAreaInsets();
 
   const [etapa, setEtapa] = useState<Etapa>('camera');
   const [foto, setFoto] = useState<string | null>(null);
@@ -348,7 +350,7 @@ export default function EscanearScreen() {
         </View>
       </View>
 
-      <View style={styles.controles}>
+      <View style={[styles.controles, { paddingBottom: spacing.lg + insets.bottom }]}>
         <Pressable
           accessibilityLabel="Escolher foto da galeria"
           accessibilityRole="button"

@@ -1,14 +1,24 @@
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { Loading } from '../../src/components/form';
 import { ICON } from '../../src/components/icons';
 import { Icon } from '../../src/components/ui';
 import { useAuth } from '../../src/hooks/useAuth';
 import { colors, font } from '../../src/theme/theme';
 
+/** Altura da barra sem contar a folga do sistema. */
+const ALTURA_ABAS = 62;
+
 export default function TabsLayout() {
   const { ready, session } = useAuth();
+
+  // O Android desenha o app por baixo da barra de navegação (edge-to-edge).
+  // Sem somar essa folga, os ícones das abas ficam atrás dos botões do sistema
+  // — e uma `height` fixa anula o ajuste que a navegação faria sozinha.
+  const insets = useSafeAreaInsets();
 
   // A sessão fica guardada no aparelho, então quem já entrou uma vez abre
   // direto — inclusive sem internet. `ready` evita o piscar da tela de login
@@ -31,7 +41,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.bgElevated,
           borderTopColor: colors.border,
-          height: 62,
+          height: ALTURA_ABAS + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 6,
         },
         tabBarActiveTintColor: colors.gold,
