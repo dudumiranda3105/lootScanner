@@ -97,24 +97,43 @@ const ESQUEMA = {
 };
 
 /**
- * Extrai o objeto JSON da resposta.
+ * Extrai o objeto JSON da resposta, ou `null` se não houver.
  *
  * Com `response_format` honrado, o conteúdo já vem JSON puro. Sem isso, modelos
  * costumam embrulhar em cercas de código ou emendar uma frase antes. Aqui a
  * cerca é removida e, se ainda sobrar texto, pegamos do primeiro `{` ao último
- * `}` — o suficiente para os dois casos.
+ * `}`.
+ *
+ * Devolve `null` em vez de lançar: modelo que enrola ou se recusa não é um erro
+ * de servidor, é um palpite ruim — e palpite ruim tem tratamento próprio.
  */
-function extrairJson(texto: string): unknown {
+function extrairJson(texto: string): Record<string, unknown> | null {
   const limpo = texto.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
 
-  try {
-    return JSON.parse(limpo);
-  } catch {
-    const inicio = limpo.indexOf('{');
-    const fim = limpo.lastIndexOf('}');
-    if (inicio === -1 || fim <= inicio) throw new Error('A resposta do modelo não continha JSON.');
-    return JSON.parse(limpo.slice(inicio, fim + 1));
-  }
+  const tentar = (candidato: string) => {
+    try {
+      const valor = JSON.parse(candidato);
+      return valor && typeof valor === 'object' ? (valor as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const direto = tentar(limpo);
+  if (direto) return direto;
+
+  const inicio = limpo.indexOf('{');
+  const fim = limpo.lastIndexOf('}');
+  if (inicio === -1 || fim <= inicio) return null;
+
+  return tentar(limpo.slice(inicio, fim + 1));
+}
+
+/** Primeira frase do texto, para aproveitar a resposta de um modelo tagarela. */
+function primeiraFrase(texto: string): string {
+  const limpo = texto.replace(/\s+/g, ' ').trim();
+  const fim = limpo.search(/[.!?]/);
+  return (fim > 0 ? limpo.slice(0, fim) : limpo).slice(0, 60).trim();
 }
 
 /* ------------------------------------------------------------------ *
@@ -229,7 +248,20 @@ Deno.serve(async (req: Request) => {
       return json({ erro: 'Resposta do modelo veio vazia.' }, 502);
     }
 
-    const bruto = extrairJson(conteudo) as Record<string, unknown>;
+    const bruto = extrairJson(conteudo);
+
+    if (!bruto) {
+      // O modelo respondeu, mas em prosa. Aproveita o que deu e segue: melhor
+      // um "desconhecido" com uma pista do que um erro na cara do usuário.
+      console.error('[identificar-loot] resposta sem JSON:', conteudo.slice(0, 300));
+      return json({
+        provider: `openrouter:${MODELO}`,
+        guesses: [{ catalogId: 'desconhecido', confidence: 0 }],
+        rarityHint: null,
+        flavor: '',
+        descricao: primeiraFrase(conteudo),
+      });
+    }
 
     /* ---- Nada do modelo entra sem validação ---- */
 
@@ -265,7 +297,15 @@ Deno.serve(async (req: Request) => {
       descricao,
     });
   } catch (erro) {
-    console.error('[identificar-loot]', erro);
-    return json({ erro: 'Não foi possível identificar a imagem.' }, 502);
+    const nome = erro instanceof Error ? erro.name : '';
+    const detalhe = erro instanceof Error ? erro.message : String(erro);
+    console.error('[identificar-loot]', nome, detalhe);
+
+    // TimeoutError vem do AbortSignal.timeout acima.
+    if (nome === 'TimeoutError' || /abort/i.test(detalhe)) {
+      return json({ erro: 'O serviço de visão demorou demais para responder.' }, 504);
+    }
+
+    return json({ erro: `Falha ao identificar a imagem: ${detalhe}` }, 502);
   }
 });
