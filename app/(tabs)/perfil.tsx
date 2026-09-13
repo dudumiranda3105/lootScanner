@@ -56,7 +56,10 @@ export default function PerfilScreen() {
       resultado.ok
         ? {
             tom: 'info',
-            texto: `Sincronizado: ${resultado.enviados} enviado(s), ${resultado.removidos} removido(s), ${resultado.recebidos} item(ns) no mural.`,
+            texto:
+              resultado.enviados > 0
+                ? `Tudo em dia. ${resultado.enviados} ${resultado.enviados === 1 ? 'item enviado' : 'itens enviados'} para o mural.`
+                : 'Tudo em dia. Nada pendente para enviar.',
           }
         : { tom: 'error', texto: resultado.erro ?? 'Não foi possível sincronizar.' },
     );
@@ -177,14 +180,14 @@ export default function PerfilScreen() {
 
           {!configured ? (
             <Notice>
-              Supabase ainda não configurado. Copie .env.example para .env, preencha a URL e a chave
-              anon do seu projeto e reinicie com: npx expo start --clear
+              Não foi possível conectar ao servidor. Seus itens continuam salvos neste aparelho e
+              serão enviados quando a conexão voltar.
             </Notice>
-          ) : session ? (
+          ) : (
             <>
               <View style={styles.linhaIcone}>
                 <Icon name="email-outline" size={15} color={colors.textFaint} />
-                <Body>{session.user.email}</Body>
+                <Body>{session?.user.email}</Body>
               </View>
 
               <TextField
@@ -203,18 +206,6 @@ export default function PerfilScreen() {
               />
               <Button label="Sair da conta" icon={ICON.sair} tone="danger" onPress={signOut} />
             </>
-          ) : (
-            <>
-              <Body>
-                Entre para publicar seus achados no mural coletivo e ver o que outras pessoas
-                encontraram.
-              </Body>
-              <Button
-                label="Entrar / criar conta"
-                icon={ICON.entrar}
-                onPress={() => router.push('/login')}
-              />
-            </>
           )}
         </Card>
       </Animated.View>
@@ -225,7 +216,7 @@ export default function PerfilScreen() {
         <Card style={styles.cartao}>
           <View style={styles.tituloComIcone}>
             <Icon name={ICON.sincronizar} size={15} color={colors.gold} />
-            <Label>Sincronização com o Supabase</Label>
+            <Label>Sincronização</Label>
           </View>
 
           <View style={styles.nivelRow}>
@@ -249,9 +240,8 @@ export default function PerfilScreen() {
           {aviso ? <Notice tone={aviso.tom}>{aviso.texto}</Notice> : null}
 
           <Body style={styles.explicacao}>
-            Os itens ficam salvos no SQLite deste aparelho e continuam acessíveis sem internet. Os
-            que você marcou como "publicar no mural" sobem para o PostgreSQL do Supabase na próxima
-            sincronização.
+            Seus itens ficam salvos no aparelho e continuam disponíveis mesmo sem internet. Os que
+            você publicou no mural sobem sozinhos assim que houver conexão.
           </Body>
         </Card>
       </Animated.View>

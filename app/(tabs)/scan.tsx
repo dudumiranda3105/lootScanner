@@ -53,7 +53,7 @@ type Etapa = 'camera' | 'analisando' | 'confirmar';
 
 export default function EscanearScreen() {
   const { addItem } = useInventory();
-  const { session, configured } = useAuth();
+  const { configured } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
 
@@ -302,7 +302,7 @@ export default function EscanearScreen() {
               description={
                 configured
                   ? 'Quem perdeu o objeto consegue encontrar o registro pelo app.'
-                  : 'Supabase ainda não configurado — o item fica só neste aparelho.'
+                  : 'Sem conexão com o mural — por enquanto o item fica só neste aparelho.'
               }
               value={publicar}
               onChange={setPublicar}
@@ -310,16 +310,9 @@ export default function EscanearScreen() {
             />
 
             {visionUsaIA && resultado?.provider === 'mock' ? (
-              <Notice tone="error">
-                A IA não respondeu — este palpite veio do identificador simulado. O motivo aparece
-                no terminal, na linha que começa com [vision].
-              </Notice>
-            ) : null}
-
-            {publicar && configured && !session ? (
               <Notice>
-                Você ainda não entrou na sua conta. O item fica guardado como pendente e sobe para o
-                mural assim que você fizer login.
+                Não foi possível identificar automaticamente. Confira o item sugerido e ajuste se
+                precisar.
               </Notice>
             ) : null}
 

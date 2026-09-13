@@ -176,7 +176,7 @@ export default function ItemScreen() {
           description={
             configured
               ? 'Aparece no mural para quem estiver procurando o objeto perdido.'
-              : 'Supabase ainda não configurado — o item fica só neste aparelho.'
+              : 'Sem conexão com o mural — por enquanto o item fica só neste aparelho.'
           }
           value={item.shared}
           onChange={(valor) => setShared(item.id, valor)}
@@ -210,7 +210,7 @@ export default function ItemScreen() {
             onPress={salvarEdicao}
             disabled={!alterado}
           />
-          {salvo && !alterado ? <Notice>Alterações salvas no banco local.</Notice> : null}
+          {salvo && !alterado ? <Notice>Alterações salvas.</Notice> : null}
         </Card>
 
         <Button

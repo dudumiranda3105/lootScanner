@@ -53,5 +53,10 @@ export function traduzErro(message: string): string {
   for (const [pattern, texto] of map) {
     if (pattern.test(message)) return texto;
   }
-  return message;
+
+  // Erro não mapeado: o texto cru costuma vir em inglês e cheio de detalhe de
+  // implementação. Vai para o console, onde é útil, e o usuário recebe algo
+  // que dá para agir.
+  console.warn('[supabase] erro sem tradução:', message);
+  return 'Algo deu errado. Tente novamente em instantes.';
 }

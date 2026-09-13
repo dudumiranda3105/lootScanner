@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -16,7 +16,7 @@ type Modo = 'entrar' | 'cadastrar';
 
 export default function LoginScreen() {
   const db = useSQLiteContext();
-  const { signIn, signUp, configured } = useAuth();
+  const { signIn, signUp, configured, session } = useAuth();
   const { refresh } = useInventory();
 
   const [modo, setModo] = useState<Modo>('entrar');
@@ -42,12 +42,16 @@ export default function LoginScreen() {
       await syncNow(db, data.user?.id ?? null);
       await refresh();
 
-      router.back();
+      // O redirect abaixo assume daqui — nada de `router.back()`, porque esta
+      // tela é a primeira da pilha quando ninguém está logado.
     } catch (error) {
       setErro(error instanceof Error ? error.message : String(error));
       setEnviando(false);
     }
   }, [modo, email, senha, nomeCacador, signIn, signUp, db, refresh]);
+
+  // Já logado: esta tela não deve mais aparecer.
+  if (session) return <Redirect href="/(tabs)" />;
 
   if (!configured) {
     return (

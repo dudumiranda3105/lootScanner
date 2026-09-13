@@ -1,11 +1,21 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 
+import { Loading } from '../../src/components/form';
 import { ICON } from '../../src/components/icons';
 import { Icon } from '../../src/components/ui';
+import { useAuth } from '../../src/hooks/useAuth';
 import { colors, font } from '../../src/theme/theme';
 
 export default function TabsLayout() {
+  const { ready, session } = useAuth();
+
+  // A sessão fica guardada no aparelho, então quem já entrou uma vez abre
+  // direto — inclusive sem internet. `ready` evita o piscar da tela de login
+  // enquanto a sessão salva ainda está sendo lida.
+  if (!ready) return <Loading />;
+  if (!session) return <Redirect href="/login" />;
+
   return (
     <Tabs
       screenOptions={{

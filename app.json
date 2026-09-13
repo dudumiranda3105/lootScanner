@@ -1,13 +1,18 @@
 {
   "expo": {
     "name": "LootScanner",
-    "slug": "LootScanner",
+    "slug": "lootscanner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dudumiranda.lootscanner",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,7 +21,9 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.dudumiranda.lootscanner",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -44,6 +51,8 @@
     "scheme": "lootscanner",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "description": "Achados e perdidos com cara de RPG. Fotografe o objeto encontrado, registre em segundos e publique no mural para quem perdeu encontrar.",
+    "primaryColor": "#E8B84B"
   }
 }

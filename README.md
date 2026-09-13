@@ -1,6 +1,9 @@
 # 🎒 LootScanner
 
-Aplicativo mobile de **achados e perdidos** com casca de RPG, feito em **React Native + Expo**.
+**Achados e perdidos que as pessoas realmente usam.** Fotografe o objeto encontrado, registre em
+segundos e publique num mural onde quem perdeu consegue procurar.
+
+React Native + Expo · Android e iOS · funciona offline.
 
 ---
 
@@ -26,18 +29,6 @@ realmente cadastrarem o que encontram.
 > [Identificação por IA](#identificação-por-ia-opcional). Sem ela configurada, o app usa um
 > provedor simulado determinístico (a mesma foto sempre devolve o mesmo item), então o fluxo
 > funciona de ponta a ponta offline.
-
----
-
-## Tecnologias obrigatórias do trabalho
-
-| Requisito | Onde está no projeto |
-|---|---|
-| **React Native + Expo**, interface e navegação | Expo SDK 57 + **Expo Router** (navegação por arquivos) em [`app/`](app) |
-| **Expo SQLite** para armazenamento local | [`src/db/schema.ts`](src/db/schema.ts) (migrações) e [`src/db/lootRepo.ts`](src/db/lootRepo.ts) (todo o SQL) |
-| **Supabase / PostgreSQL** para persistência online | [`supabase/schema.sql`](supabase/schema.sql), [`src/services/supabase.ts`](src/services/supabase.ts) e [`src/services/sync.ts`](src/services/sync.ts) |
-
----
 
 ## Como rodar
 
@@ -234,23 +225,6 @@ XP viraria sorteio. O limite de um degrau mantém as duas pontas.
 - **O catálogo da função é gerado**, não copiado na mão: `npm run gen:catalogo` extrai os 36 itens
   de `src/domain/catalog.ts`. Rode depois de mexer no catálogo.
 
----
-
-## Roteiro da apresentação (10 minutos)
-
-| Tempo | O quê | Critério da rubrica |
-|---|---|---|
-| ~1 min | **O problema.** A caixa de achados e perdidos da recepção, sem registro nenhum. | Proposta coerente (2,0) |
-| ~3 min | **Demo.** Escanear um objeto → confirmar → item cai no inventário → abrir a ficha → marcar como devolvido. Circular pelas 4 abas. | React Native + Expo (2,0) |
-| ~2 min | **SQLite.** Fechar o app por completo e reabrir: os itens continuam lá. Mostrar `src/db/schema.ts` e `lootRepo.ts` — as tabelas, as migrações e o SQL parametrizado. | Expo SQLite (3,0) |
-| ~3 min | **Supabase.** Tocar em "Sincronizar agora" no Perfil e, ao lado, abrir o painel do Supabase em **Table Editor ▸ loot_items** com a linha nova aparecendo. Mostrar o mural num segundo aparelho/conta vendo o item do primeiro. | Supabase/PostgreSQL (3,0) |
-| ~1 min | **Próximo passo.** A visão computacional real entra no 2º bimestre, encaixando em `VisionProvider` sem mexer nas telas. | — |
-
-**Dica para a demo:** deixe dois aparelhos com contas diferentes já logados e um item publicado
-antes de começar. Assim o mural coletivo aparece populado e a troca entre os dois é imediata.
-
----
-
 ## Estrutura do projeto
 
 ```
@@ -283,3 +257,9 @@ Antes de investigar na mão, rode `npm run check:supabase` — ele costuma apont
 | "Conta criada! Confirme o e-mail…" | O **Confirm email** ainda está ligado no painel do Supabase. |
 | Login OK, mas o mural fica vazio | O `supabase/schema.sql` não foi rodado, ou rodou pela metade. Rode o script inteiro de novo. |
 | Sincronização acusa erro de permissão | As políticas de RLS não foram criadas. Rode a seção 4 do `schema.sql`. |
+
+---
+
+## Documentação
+
+- [Guia da apresentação](docs/apresentacao.md) — mapeamento das tecnologias e roteiro de 10 minutos

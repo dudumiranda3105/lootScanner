@@ -70,14 +70,9 @@ export default function RootLayout() {
                 options={{ title: 'Ficha do item', headerBackTitle: 'Voltar' }}
               />
 
-              <Stack.Screen
-                name="login"
-                options={{
-                  title: 'Conta de caçador',
-                  presentation: 'modal',
-                  animation: 'slide_from_bottom',
-                }}
-              />
+              {/* Tela de entrada: sem cabeçalho e sem volta — não há para onde
+                  voltar enquanto ninguém estiver logado. */}
+              <Stack.Screen name="login" options={{ headerShown: false }} />
             </Stack>
           </InventoryProvider>
         </AuthProvider>
