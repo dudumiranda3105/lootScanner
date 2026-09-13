@@ -56,7 +56,11 @@ ${LISTA}
 
 Regras:
 - Responda sempre com um id exatamente como escrito acima.
-- Se nenhum item servir, ou a foto estiver ilegível, use "desconhecido".
+- Se nenhum item servir, use "desconhecido" — e aí "descricao" é obrigatória.
+- "descricao" é o nome real do objeto em 1 a 3 palavras, em português, como uma
+  pessoa o chamaria ("cola bastão", "garrafa de café", "carregador de notebook").
+  Preencha SEMPRE, mesmo quando reconhecer um item do catálogo: é o que permite
+  registrar objetos que a lista não cobre.
 - "confianca" é de 0 a 1 e deve refletir honestamente sua certeza. Não infle.
 - "alternativas" traz até 2 outros ids plausíveis, do mais provável ao menos.
 - "raridade" é o quanto o objeto parece valioso ou difícil de repor, na visão
@@ -69,7 +73,7 @@ Regras:
 Responda APENAS com um objeto JSON, sem texto antes ou depois e sem cercas de
 código, exatamente nesta forma:
 
-{"item":"fone","confianca":0.82,"alternativas":["carregador"],"raridade":"raro","sabor":"..."}`;
+{"item":"fone","confianca":0.82,"alternativas":["carregador"],"raridade":"raro","sabor":"...","descricao":"fone de ouvido"}`;
 
 const ESQUEMA = {
   type: 'object',
@@ -79,8 +83,9 @@ const ESQUEMA = {
     alternativas: { type: 'array', items: { type: 'string' } },
     raridade: { type: 'string', enum: RARIDADES },
     sabor: { type: 'string' },
+    descricao: { type: 'string' },
   },
-  required: ['item', 'confianca', 'alternativas', 'raridade', 'sabor'],
+  required: ['item', 'confianca', 'alternativas', 'raridade', 'sabor', 'descricao'],
   additionalProperties: false,
 };
 
@@ -236,6 +241,9 @@ Deno.serve(async (req: Request) => {
 
     const sabor = typeof bruto.sabor === 'string' ? bruto.sabor.slice(0, 120).trim() : '';
 
+    const descricao =
+      typeof bruto.descricao === 'string' ? bruto.descricao.slice(0, 60).trim() : '';
+
     return json({
       provider: `openrouter:${MODELO}`,
       guesses: [
@@ -247,6 +255,7 @@ Deno.serve(async (req: Request) => {
       ],
       rarityHint: raridade,
       flavor: sabor,
+      descricao,
     });
   } catch (erro) {
     console.error('[identificar-loot]', erro);

@@ -94,4 +94,10 @@ export interface VisionResult {
   rarityHint?: RarityId | null;
   /** Frase curta, no tom de RPG, descrevendo o objeto. Só enfeite. */
   flavor?: string;
+  /**
+   * O nome real do objeto, em 1 a 3 palavras. Importa quando o item cai em
+   * "desconhecido": é o que permite registrar coisas fora do catálogo com um
+   * nome útil, em vez de "Item misterioso".
+   */
+  descricao?: string;
 }

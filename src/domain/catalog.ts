@@ -15,7 +15,15 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'borracha', name: 'Borracha', category: 'material_escolar', emblem: '🧽', icon: 'eraser', keywords: ['eraser', 'rubber', 'borracha'] },
   { id: 'estojo', name: 'Estojo', category: 'material_escolar', emblem: '🧰', icon: 'pencil-box-multiple', keywords: ['pencil case', 'estojo', 'pouch'] },
   { id: 'regua', name: 'Régua', category: 'material_escolar', emblem: '📏', icon: 'ruler', keywords: ['ruler', 'regua'] },
-  { id: 'apostila', name: 'Apostila', category: 'material_escolar', emblem: '📄', icon: 'file-document-outline', keywords: ['paper', 'document', 'apostila', 'folder'] },
+  { id: 'apostila', name: 'Apostila', category: 'material_escolar', emblem: '📄', icon: 'file-document-outline', keywords: ['paper', 'document', 'apostila'] },
+  { id: 'cola', name: 'Cola', category: 'material_escolar', emblem: '🧴', icon: 'bottle-tonic', keywords: ['glue', 'glue stick', 'cola', 'adhesive', 'bastao de cola'] },
+  { id: 'tesoura', name: 'Tesoura', category: 'material_escolar', emblem: '✂️', icon: 'content-cut', keywords: ['scissors', 'tesoura', 'shears'] },
+  { id: 'apontador', name: 'Apontador', category: 'material_escolar', emblem: '🔪', icon: 'pencil-box-outline', keywords: ['pencil sharpener', 'sharpener', 'apontador'] },
+  { id: 'marca_texto', name: 'Marca-texto', category: 'material_escolar', emblem: '🖍️', icon: 'marker', keywords: ['highlighter', 'marker', 'marca-texto', 'marcador'] },
+  { id: 'corretivo', name: 'Corretivo', category: 'material_escolar', emblem: '⚪', icon: 'format-color-fill', keywords: ['correction fluid', 'white out', 'corretivo', 'liquid paper'] },
+  { id: 'agenda', name: 'Agenda', category: 'material_escolar', emblem: '📔', icon: 'calendar-text', keywords: ['planner', 'agenda', 'diary', 'calendar'] },
+  { id: 'pasta', name: 'Pasta / fichário', category: 'material_escolar', emblem: '📁', icon: 'folder-outline', keywords: ['folder', 'binder', 'pasta', 'ficharo', 'file folder'] },
+  { id: 'grampeador', name: 'Grampeador', category: 'material_escolar', emblem: '📎', icon: 'paperclip', keywords: ['stapler', 'grampeador', 'paper clip', 'clipe'] },
 
   // --- Vestuário (incomum) ---
   { id: 'casaco', name: 'Casaco', category: 'vestuario', emblem: '🧥', icon: 'coat-rack', keywords: ['jacket', 'coat', 'casaco', 'hoodie', 'sweater'] },
@@ -23,6 +31,8 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'bone', name: 'Boné', category: 'vestuario', emblem: '🧢', icon: 'hat-fedora', keywords: ['cap', 'hat', 'bone'] },
   { id: 'cachecol', name: 'Cachecol', category: 'vestuario', emblem: '🧣', icon: 'tie', keywords: ['scarf', 'cachecol'] },
   { id: 'tenis', name: 'Tênis', category: 'vestuario', emblem: '👟', icon: 'shoe-sneaker', keywords: ['sneaker', 'shoe', 'tenis', 'running shoe'] },
+  { id: 'chinelo', name: 'Chinelo', category: 'vestuario', emblem: '🩴', icon: 'shoe-cleat', keywords: ['sandal', 'flip flop', 'chinelo', 'slipper'] },
+  { id: 'luva', name: 'Luva', category: 'vestuario', emblem: '🧤', icon: 'hand-back-left-outline', keywords: ['glove', 'gloves', 'luva', 'mitten'] },
 
   // --- Acessórios (incomum) ---
   { id: 'garrafa', name: 'Garrafa térmica', category: 'acessorio', emblem: '🍶', icon: 'bottle-soda-classic', keywords: ['bottle', 'water bottle', 'garrafa', 'thermos'] },
@@ -31,6 +41,10 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'mochila', name: 'Mochila', category: 'acessorio', emblem: '🎒', icon: 'bag-personal', keywords: ['backpack', 'mochila', 'bag'] },
   { id: 'squeeze', name: 'Copo / squeeze', category: 'acessorio', emblem: '🥤', icon: 'cup', keywords: ['cup', 'mug', 'tumbler', 'copo'] },
   { id: 'chaveiro', name: 'Chaveiro', category: 'acessorio', emblem: '🧸', icon: 'teddy-bear', keywords: ['keychain', 'chaveiro', 'toy'] },
+  { id: 'lancheira', name: 'Lancheira', category: 'acessorio', emblem: '🍱', icon: 'food-apple-outline', keywords: ['lunch box', 'lunchbox', 'lancheira', 'marmita'] },
+  { id: 'talheres', name: 'Talheres', category: 'acessorio', emblem: '🍴', icon: 'silverware-fork-knife', keywords: ['cutlery', 'fork', 'spoon', 'talher', 'garfo', 'colher'] },
+  { id: 'toalha', name: 'Toalha', category: 'acessorio', emblem: '🧻', icon: 'hanger', keywords: ['towel', 'toalha'] },
+  { id: 'mascara', name: 'Máscara', category: 'acessorio', emblem: '😷', icon: 'face-mask-outline', keywords: ['face mask', 'mask', 'mascara'] },
 
   // --- Eletrônicos (raro) ---
   { id: 'fone', name: 'Fone de ouvido', category: 'eletronico', emblem: '🎧', icon: 'headphones', keywords: ['headphone', 'earphone', 'fone', 'earbuds'] },
@@ -40,6 +54,9 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'mouse', name: 'Mouse', category: 'eletronico', emblem: '🖱️', icon: 'mouse', keywords: ['mouse', 'computer mouse'] },
   { id: 'calculadora', name: 'Calculadora', category: 'eletronico', emblem: '🧮', icon: 'calculator', keywords: ['calculator', 'calculadora'] },
   { id: 'powerbank', name: 'Power bank', category: 'eletronico', emblem: '🔋', icon: 'battery-charging', keywords: ['power bank', 'battery', 'bateria'] },
+  { id: 'teclado', name: 'Teclado', category: 'eletronico', emblem: '⌨️', icon: 'keyboard-outline', keywords: ['keyboard', 'teclado'] },
+  { id: 'caixa_som', name: 'Caixa de som', category: 'eletronico', emblem: '🔊', icon: 'speaker', keywords: ['speaker', 'bluetooth speaker', 'caixa de som'] },
+  { id: 'controle', name: 'Controle', category: 'eletronico', emblem: '🎮', icon: 'gamepad-variant', keywords: ['controller', 'gamepad', 'joystick', 'controle'] },
 
   // --- Documentos e chaves (épico) ---
   { id: 'carteirinha', name: 'Carteirinha estudantil', category: 'documento', emblem: '🪪', icon: 'card-account-details', keywords: ['id card', 'badge', 'carteirinha', 'student card'] },

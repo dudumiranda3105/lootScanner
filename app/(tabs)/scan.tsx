@@ -105,7 +105,12 @@ export default function EscanearScreen() {
 
     setResultado(encontrado);
     setCatalogId(entrada.id);
-    setNome(entrada.name);
+
+    // Fora do catálogo, o nome do objeto vale mais que "Item misterioso":
+    // quem perdeu vai procurar por "cola", não por "misterioso".
+    const descricao = encontrado.descricao?.trim();
+    setNome(entrada.id === 'desconhecido' && descricao ? capitalizar(descricao) : entrada.name);
+
     setEtapa('confirmar');
 
     // Itens raros merecem uma vibração mais forte — é a graça do "loot".
@@ -373,6 +378,10 @@ export default function EscanearScreen() {
       </View>
     </View>
   );
+}
+
+function capitalizar(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 /** Canto decorativo da mira, no estilo de visor. */

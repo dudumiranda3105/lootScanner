@@ -219,6 +219,7 @@ export const supabaseVisionProvider: VisionProvider = {
       guesses,
       rarityHint: (data.rarityHint ?? null) as RarityId | null,
       flavor: typeof data.flavor === 'string' ? data.flavor : undefined,
+      descricao: typeof data.descricao === 'string' ? data.descricao : undefined,
     };
   },
 };
