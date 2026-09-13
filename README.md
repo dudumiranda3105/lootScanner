@@ -158,9 +158,14 @@ configurado, nada quebra: o provedor simulado assume e o fluxo continua idêntic
 
 A chave da IA **não pode ficar no app**. Qualquer coisa em `EXPO_PUBLIC_*` vai dentro do bundle, e
 quem tiver o APK consegue extrair — com a conta correndo por sua parte. Por isso a chamada passa
-por [`supabase/functions/identificar-loot`](supabase/functions/identificar-loot/index.ts): a chave
-vive lá como secret do projeto, e o Supabase só aceita chamadas com um JWT válido, então apenas
-quem está logado no app consegue gastá-la.
+por [`supabase/functions/identificar-loot`](supabase/functions/identificar-loot/index.ts), onde a
+chave vive como secret do projeto.
+
+> **Atenção a uma armadilha:** a verificação de JWT do próprio Supabase **não** basta. A chave
+> publishable do projeto é um credencial válido para ela — e essa chave vai dentro do app, então
+> qualquer um a extrai do APK e chamaria a função à vontade. Por isso a função troca o token por um
+> usuário (`auth.getUser`), que só existe quando o `Authorization` carrega o JWT de uma sessão
+> real. Sem isso, ela responde 401.
 
 ```
 app  ──foto (base64) + JWT──▶  Edge Function  ──chave no servidor──▶  OpenRouter

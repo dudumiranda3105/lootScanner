@@ -17,6 +17,8 @@
  * usuários logados no app conseguem gastar a chave.
  */
 
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
 import { CATALOGO, IDS_VALIDOS } from './catalogo.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -90,6 +92,32 @@ Deno.serve(async (req: Request) => {
   const chave = Deno.env.get('OPENROUTER_API_KEY');
   if (!chave) {
     return json({ erro: 'OPENROUTER_API_KEY não configurada no projeto.' }, 500);
+  }
+
+  /* ---- Exige um usuário logado de verdade ----
+   *
+   * A verificação de JWT do próprio Supabase NÃO basta aqui: a chave
+   * publishable do projeto é um credencial válido para ela, e essa chave vai
+   * dentro do app — qualquer um extrai do APK e chamaria esta função à vontade,
+   * gastando o crédito do OpenRouter.
+   *
+   * Por isso trocamos o token por um usuário: `getUser` só devolve alguém
+   * quando o Authorization carrega o JWT de uma sessão real. Com a chave
+   * publishable no lugar, ele falha — que é o que queremos.
+   */
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+
+  if (!token) return json({ erro: 'Entre na sua conta para usar a identificação por IA.' }, 401);
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+  );
+
+  const { data: usuario, error: erroAuth } = await supabase.auth.getUser(token);
+
+  if (erroAuth || !usuario?.user) {
+    return json({ erro: 'Entre na sua conta para usar a identificação por IA.' }, 401);
   }
 
   let imagemBase64: string;

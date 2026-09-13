@@ -192,8 +192,10 @@ export function createRemoteVisionProvider(endpoint: string): VisionProvider {
  * que chama o OpenRouter. A chave da IA vive lá, como secret do projeto — nunca
  * dentro do app.
  *
- * O `functions.invoke` já anexa o JWT do usuário logado, e a função exige um
- * JWT válido. Ou seja: só quem entrou na conta consegue gastar a chave.
+ * O `functions.invoke` anexa sozinho o JWT da sessão. Sem login ele manda só a
+ * chave publishable, e a função responde 401 — de propósito: ela confere que
+ * existe um usuário de verdade, não apenas um JWT qualquer. Nesse caso o
+ * `identifyItem` cai no provedor simulado.
  */
 export const supabaseVisionProvider: VisionProvider = {
   id: 'supabase',
