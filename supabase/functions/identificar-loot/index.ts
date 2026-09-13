@@ -48,15 +48,22 @@ const LISTA = CATALOGO.filter((i) => i.id !== 'desconhecido')
   .map((i) => `- ${i.id}: ${i.name} (${i.category})`)
   .join('\n');
 
-const SISTEMA = `Você identifica objetos perdidos em fotos, para um aplicativo de achados e perdidos de uma escola.
+const SISTEMA = `Você identifica objetos perdidos em fotos, para um aplicativo de achados e perdidos de uma escola brasileira.
 
-Escolha o item do catálogo abaixo que MELHOR corresponde ao objeto principal da foto:
+A foto costuma ser de um único objeto largado sobre uma carteira, mesa, banco ou
+chão, tirada de perto e às vezes com iluminação ruim. Ignore o fundo e o que
+estiver ao redor: interessa o objeto em primeiro plano.
+
+Escolha o item do catálogo abaixo que MELHOR corresponde a esse objeto:
 
 ${LISTA}
 
 Regras:
 - Responda sempre com um id exatamente como escrito acima.
-- Se nenhum item servir, use "desconhecido" — e aí "descricao" é obrigatória.
+- Prefira o item mais próximo a desistir. Uma lapiseira é "lapis"; um fichário é
+  "pasta"; uma garrafinha de água é "garrafa"; um carregador de notebook é
+  "carregador". Só use "desconhecido" quando nada na lista chegar perto.
+- Quando usar "desconhecido", "descricao" é obrigatória.
 - "descricao" é o nome real do objeto em 1 a 3 palavras, em português, como uma
   pessoa o chamaria ("cola bastão", "garrafa de café", "carregador de notebook").
   Preencha SEMPRE, mesmo quando reconhecer um item do catálogo: é o que permite

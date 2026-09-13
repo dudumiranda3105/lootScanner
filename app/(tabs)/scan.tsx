@@ -27,6 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Notice, TextField, Toggle } from '../../src/components/form';
+import { SeletorItem } from '../../src/components/SeletorItem';
 import { ICON } from '../../src/components/icons';
 import {
   Body,
@@ -68,6 +69,7 @@ export default function EscanearScreen() {
   const [nota, setNota] = useState('');
   const [publicar, setPublicar] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [escolhendo, setEscolhendo] = useState(false);
 
   const reiniciar = useCallback(() => {
     setEtapa('camera');
@@ -78,6 +80,7 @@ export default function EscanearScreen() {
     setLocal('');
     setNota('');
     setSalvando(false);
+    setEscolhendo(false);
   }, []);
 
   // Sair da aba e voltar recomeça o fluxo, em vez de reabrir um rascunho antigo.
@@ -254,9 +257,10 @@ export default function EscanearScreen() {
               <Text style={[styles.sabor, { color: def.color }]}>“{resultado.flavor}”</Text>
             ) : null}
 
+            <Divider />
+
             {alternativas.length > 0 ? (
               <>
-                <Divider />
                 <Label>Não é isso? Troque:</Label>
                 <View style={styles.alternativas}>
                   {alternativas.map((palpite) => {
@@ -278,7 +282,26 @@ export default function EscanearScreen() {
                 </View>
               </>
             ) : null}
+
+            <Button
+              label="Escolher outro item"
+              icon="format-list-bulleted"
+              tone="ghost"
+              onPress={() => setEscolhendo(true)}
+            />
           </Animated.View>
+
+          <SeletorItem
+            visivel={escolhendo}
+            selecionado={catalogId}
+            onFechar={() => setEscolhendo(false)}
+            onEscolher={(escolhido) => {
+              void Haptics.selectionAsync();
+              setCatalogId(escolhido.id);
+              setNome(escolhido.name);
+              setEscolhendo(false);
+            }}
+          />
 
           <Animated.View entering={FadeIn.delay(160).duration(260)} style={styles.campos}>
             <TextField label="Nome do item" value={nome} onChangeText={setNome} />
