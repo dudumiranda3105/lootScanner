@@ -208,7 +208,7 @@ export const supabaseVisionProvider: VisionProvider = {
       body: { imagemBase64: input.base64, mimeType: 'image/jpeg' },
     });
 
-    if (error) throw error;
+    if (error) throw await detalharErro(error);
     if (data?.erro) throw new Error(String(data.erro));
 
     const guesses = Array.isArray(data?.guesses) ? data.guesses : [];
@@ -226,6 +226,26 @@ export const supabaseVisionProvider: VisionProvider = {
 /* ------------------------------------------------------------------ *
  * Seleção do provedor ativo
  * ------------------------------------------------------------------ */
+
+/**
+ * Abre o erro do `functions.invoke`.
+ *
+ * Um `FunctionsHttpError` traz só "Edge Function returned a non-2xx status
+ * code" na mensagem — o motivo de verdade fica no corpo da resposta, guardado
+ * em `context`. Sem desempacotar isso, todo problema da função (sem login,
+ * crédito zerado, chave errada) vira o mesmo texto genérico no console.
+ */
+async function detalharErro(error: unknown): Promise<Error> {
+  const contexto = (error as { context?: Response })?.context;
+
+  if (contexto && typeof contexto.json === 'function') {
+    const corpo = await contexto.json().catch(() => null);
+    const detalhe = corpo?.erro ?? (corpo ? JSON.stringify(corpo) : 'sem corpo');
+    return new Error(`a função respondeu ${contexto.status} — ${detalhe}`);
+  }
+
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 /** Teto para a identificação por IA. Acima disso, o simulado assume. */
 const TEMPO_LIMITE_MS = 30_000;

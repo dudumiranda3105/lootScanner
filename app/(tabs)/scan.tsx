@@ -46,7 +46,7 @@ import { VisionResult } from '../../src/domain/types';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useInventory } from '../../src/hooks/useInventory';
 import { reduzirParaIA } from '../../src/services/imagem';
-import { identifyItem } from '../../src/services/vision';
+import { identifyItem, visionUsaIA } from '../../src/services/vision';
 import { colors, font, glow, radius, spacing } from '../../src/theme/theme';
 
 type Etapa = 'camera' | 'analisando' | 'confirmar';
@@ -303,6 +303,13 @@ export default function EscanearScreen() {
               onChange={setPublicar}
               disabled={!configured}
             />
+
+            {visionUsaIA && resultado?.provider === 'mock' ? (
+              <Notice tone="error">
+                A IA não respondeu — este palpite veio do identificador simulado. O motivo aparece
+                no terminal, na linha que começa com [vision].
+              </Notice>
+            ) : null}
 
             {publicar && configured && !session ? (
               <Notice>
