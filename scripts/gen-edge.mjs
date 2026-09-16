@@ -85,6 +85,18 @@ export const MODELOS_PERMITIDOS = new Set<string>([
 ${ids.map((id) => `  '${id}',`).join('\n')}
 ]);
 
+/**
+ * Só os gratuitos, na ordem da lista. Servem de reserva quando o modelo
+ * escolhido responde que está indisponível — o pool gratuito satura com
+ * frequência. Nunca caímos para um pago: gastaria crédito sem o usuário pedir.
+ */
+export const MODELOS_RESERVA: string[] = [
+${ids
+  .filter((id) => id.endsWith(':free'))
+  .map((id) => `  '${id}',`)
+  .join('\n')}
+];
+
 /** Usado quando o app não manda nada, ou manda algo fora da lista. */
 export const MODELO_PADRAO = '${ids[0]}';
 `,

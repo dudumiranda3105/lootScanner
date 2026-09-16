@@ -18,7 +18,7 @@
  */
 
 import { CATALOGO, IDS_VALIDOS } from './catalogo.ts';
-import { MODELO_PADRAO, MODELOS_PERMITIDOS } from './modelos.ts';
+import { MODELO_PADRAO, MODELOS_PERMITIDOS, MODELOS_RESERVA } from './modelos.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -37,6 +37,25 @@ const MODELO_DO_PROJETO = Deno.env.get('OPENROUTER_MODEL') ?? MODELO_PADRAO;
  */
 function escolherModelo(pedido: unknown): string {
   return typeof pedido === 'string' && MODELOS_PERMITIDOS.has(pedido) ? pedido : MODELO_DO_PROJETO;
+}
+
+/**
+ * Status que valem uma nova tentativa em outro modelo.
+ *
+ * 503 e 429 sao o pool gratuito saturado ou o limite batido — condicao do
+ * provedor, nao da nossa requisicao. Repetir no mesmo modelo nao adianta;
+ * trocar, sim.
+ */
+const RETENTAVEIS = new Set([408, 429, 502, 503, 504, 524]);
+
+/**
+ * O modelo escolhido primeiro, depois os gratuitos como reserva.
+ *
+ * Limitado a tres para a espera nao virar eternidade: cada tentativa custa uma
+ * ida ao provedor, e a tela fica em "analisando" o tempo todo.
+ */
+function filaDeModelos(escolhido: string): string[] {
+  return [escolhido, ...MODELOS_RESERVA.filter((m) => m !== escolhido)].slice(0, 3);
 }
 
 const RARIDADES = ['comum', 'incomum', 'raro', 'epico', 'lendario'] as const;
@@ -245,117 +264,141 @@ Deno.serve(async (req: Request) => {
     return json({ erro: 'Imagem grande demais — reduza antes de enviar.' }, 413);
   }
 
+  const fila = filaDeModelos(modelo);
+  let ultimoErro = 'sem detalhe';
+  let ultimoStatus = 502;
+
   try {
-    const resposta = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${chave}`,
-        'Content-Type': 'application/json',
-        'X-Title': 'LootScanner',
-      },
-      body: JSON.stringify({
-        model: modelo,
-
-        // Vários modelos com visão do OpenRouter — inclusive todos os gratuitos —
-        // são de raciocínio: gastam tokens "pensando" antes de escrever. Com um
-        // teto apertado, o raciocínio consome tudo e `content` volta vazio.
-        // Escolher entre 53 itens não precisa de cadeia de pensamento, então
-        // pedimos para desligar; e o teto fica folgado para quem ignorar o pedido.
-        max_tokens: 1500,
-        reasoning: { enabled: false },
-        messages: [
-          { role: 'system', content: SISTEMA },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Que item de loot é este?' },
-              {
-                type: 'image_url',
-                image_url: { url: `data:${mimeType};base64,${imagemBase64}` },
-              },
-            ],
-          },
-        ],
-        // Melhor esforço: os modelos que suportam devolvem JSON garantido. Os que
-        // não suportam ignoram este campo — e aí vale a instrução do prompt, com
-        // `extrairJson` limpando o que vier em volta. Não usamos
-        // `provider.require_parameters`, que recusaria o roteamento para todo
-        // modelo sem structured_outputs (a maioria dos gratuitos).
-        response_format: {
-          type: 'json_schema',
-          json_schema: { name: 'loot', strict: true, schema: ESQUEMA },
+    for (const candidato of fila) {
+      const resposta = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${chave}`,
+          'Content-Type': 'application/json',
+          'X-Title': 'LootScanner',
         },
-      }),
-      // Sem teto, uma chamada pendurada segura a função até o limite do runtime
-      // — e o app fica girando junto, sem nunca receber resposta.
-      signal: AbortSignal.timeout(25_000),
-    });
+        body: JSON.stringify({
+          model: candidato,
 
-    if (!resposta.ok) {
-      const detalhe = await resposta.text();
-      console.error('[openrouter]', resposta.status, detalhe.slice(0, 400));
-      return json({ erro: `O serviço de visão respondeu ${resposta.status}.` }, 502);
-    }
+          // Vários modelos com visão do OpenRouter — inclusive todos os gratuitos —
+          // são de raciocínio: gastam tokens "pensando" antes de escrever. Com um
+          // teto apertado, o raciocínio consome tudo e `content` volta vazio.
+          // Escolher entre 53 itens não precisa de cadeia de pensamento, então
+          // pedimos para desligar; e o teto fica folgado para quem ignorar o pedido.
+          max_tokens: 1500,
+          reasoning: { enabled: false },
+          messages: [
+            { role: 'system', content: SISTEMA },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'Que item de loot é este?' },
+                {
+                  type: 'image_url',
+                  image_url: { url: `data:${mimeType};base64,${imagemBase64}` },
+                },
+              ],
+            },
+          ],
+          // Melhor esforço: os modelos que suportam devolvem JSON garantido. Os que
+          // não suportam ignoram este campo — e aí vale a instrução do prompt, com
+          // `extrairJson` limpando o que vier em volta. Não usamos
+          // `provider.require_parameters`, que recusaria o roteamento para todo
+          // modelo sem structured_outputs (a maioria dos gratuitos).
+          response_format: {
+            type: 'json_schema',
+            json_schema: { name: 'loot', strict: true, schema: ESQUEMA },
+          },
+        }),
+        // Sem teto, uma chamada pendurada segura a função até o limite do runtime
+        // — e o app fica girando junto, sem nunca receber resposta.
+        signal: AbortSignal.timeout(25_000),
+      });
 
-    const dados = await resposta.json();
-    const conteudo = extrairConteudo(dados);
+      if (!resposta.ok) {
+        ultimoStatus = resposta.status;
+        ultimoErro = (await resposta.text()).slice(0, 300);
+        console.error('[openrouter]', candidato, resposta.status, ultimoErro);
 
-    if (!conteudo) {
-      // Sem texto em nenhum dos formatos conhecidos: o motivo costuma estar em
-      // `finish_reason` (`length` = teto de tokens estourado).
-      const motivo = dados?.choices?.[0]?.finish_reason ?? 'desconhecido';
-      console.error('[identificar-loot] sem conteudo, finish_reason:', motivo, JSON.stringify(dados).slice(0, 400));
-      return json({ erro: `O modelo não devolveu texto (motivo: ${motivo}).` }, 502);
-    }
+        // Indisponibilidade do provedor: vale tentar o próximo da fila.
+        if (RETENTAVEIS.has(resposta.status)) continue;
 
-    const bruto = extrairJson(conteudo);
+        return json(
+          { erro: `O serviço de visão respondeu ${resposta.status}.`, detalhe: ultimoErro },
+          502,
+        );
+      }
 
-    if (!bruto) {
-      // O modelo respondeu, mas em prosa. Aproveita o que deu e segue: melhor
-      // um "desconhecido" com uma pista do que um erro na cara do usuário.
-      console.error('[identificar-loot] resposta sem JSON:', conteudo.slice(0, 300));
+      const dados = await resposta.json();
+      const conteudo = extrairConteudo(dados);
+
+      if (!conteudo) {
+        // Sem texto em nenhum dos formatos conhecidos: o motivo costuma estar em
+        // `finish_reason` (`length` = teto de tokens estourado).
+        const motivo = dados?.choices?.[0]?.finish_reason ?? 'desconhecido';
+        console.error('[identificar-loot] sem conteudo, finish_reason:', motivo, JSON.stringify(dados).slice(0, 400));
+        return json({ erro: `O modelo não devolveu texto (motivo: ${motivo}).` }, 502);
+      }
+
+      const bruto = extrairJson(conteudo);
+
+      if (!bruto) {
+        // O modelo respondeu, mas em prosa. Aproveita o que deu e segue: melhor
+        // um "desconhecido" com uma pista do que um erro na cara do usuário.
+        console.error('[identificar-loot] resposta sem JSON:', conteudo.slice(0, 300));
+        return json({
+          provider: `openrouter:${candidato}`,
+          guesses: [{ catalogId: 'desconhecido', confidence: 0 }],
+          rarityHint: null,
+          flavor: '',
+          descricao: primeiraFrase(conteudo),
+        });
+      }
+
+      /* ---- Nada do modelo entra sem validação ---- */
+
+      const item =
+        typeof bruto.item === 'string' && IDS_VALIDOS.has(bruto.item) ? bruto.item : 'desconhecido';
+
+      const confianca = Math.max(0, Math.min(1, Number(bruto.confianca) || 0));
+
+      const alternativas = (Array.isArray(bruto.alternativas) ? bruto.alternativas : [])
+        .filter((a): a is string => typeof a === 'string' && IDS_VALIDOS.has(a) && a !== item)
+        .slice(0, 2);
+
+      const raridade: Raridade | null = RARIDADES.includes(bruto.raridade as Raridade)
+        ? (bruto.raridade as Raridade)
+        : null;
+
+      const sabor = typeof bruto.sabor === 'string' ? bruto.sabor.slice(0, 120).trim() : '';
+
+      const descricao =
+        typeof bruto.descricao === 'string' ? bruto.descricao.slice(0, 60).trim() : '';
+
       return json({
-        provider: `openrouter:${modelo}`,
-        guesses: [{ catalogId: 'desconhecido', confidence: 0 }],
-        rarityHint: null,
-        flavor: '',
-        descricao: primeiraFrase(conteudo),
+        provider: `openrouter:${candidato}`,
+        guesses: [
+          { catalogId: item, confidence: confianca },
+          ...alternativas.map((id, i) => ({
+            catalogId: id,
+            confidence: Math.max(0.05, confianca - 0.2 - i * 0.15),
+          })),
+        ],
+        rarityHint: raridade,
+        flavor: sabor,
+        descricao,
       });
     }
 
-    /* ---- Nada do modelo entra sem validação ---- */
-
-    const item =
-      typeof bruto.item === 'string' && IDS_VALIDOS.has(bruto.item) ? bruto.item : 'desconhecido';
-
-    const confianca = Math.max(0, Math.min(1, Number(bruto.confianca) || 0));
-
-    const alternativas = (Array.isArray(bruto.alternativas) ? bruto.alternativas : [])
-      .filter((a): a is string => typeof a === 'string' && IDS_VALIDOS.has(a) && a !== item)
-      .slice(0, 2);
-
-    const raridade: Raridade | null = RARIDADES.includes(bruto.raridade as Raridade)
-      ? (bruto.raridade as Raridade)
-      : null;
-
-    const sabor = typeof bruto.sabor === 'string' ? bruto.sabor.slice(0, 120).trim() : '';
-
-    const descricao =
-      typeof bruto.descricao === 'string' ? bruto.descricao.slice(0, 60).trim() : '';
-
-    return json({
-      provider: `openrouter:${modelo}`,
-      guesses: [
-        { catalogId: item, confidence: confianca },
-        ...alternativas.map((id, i) => ({
-          catalogId: id,
-          confidence: Math.max(0.05, confianca - 0.2 - i * 0.15),
-        })),
-      ],
-      rarityHint: raridade,
-      flavor: sabor,
-      descricao,
-    });
+    // A fila acabou sem ninguém conseguir responder.
+    console.error('[identificar-loot] todos indisponíveis:', fila.join(', '));
+    return json(
+      {
+        erro: `Nenhum modelo disponível agora (último: ${ultimoStatus}). Tente de novo em instantes ou escolha outro no Perfil.`,
+        detalhe: ultimoErro,
+      },
+      503,
+    );
   } catch (erro) {
     const nome = erro instanceof Error ? erro.name : '';
     const detalhe = erro instanceof Error ? erro.message : String(erro);
