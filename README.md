@@ -5,6 +5,11 @@ segundos e publique num mural onde quem perdeu consegue procurar.
 
 React Native + Expo · Android e iOS · funciona offline.
 
+> **Entrega do 1º bimestre.** Esta versão cobre a base pedida no trabalho: interface e navegação
+> em React Native + Expo, armazenamento local com Expo SQLite e persistência online com
+> Supabase/PostgreSQL. A visão computacional (item do 2º bimestre) já está prototipada como bônus
+> — veja [Identificação por IA](#identificação-por-ia-bônus-adiantado-do-2º-bimestre).
+
 ---
 
 ## O problema real
@@ -25,9 +30,7 @@ A camada de gamificação — raridade, inventário, XP, coleção — não muda
 Ela existe para tornar o ato de registrar mais engajante, o que aumenta a chance de as pessoas
 realmente cadastrarem o que encontram.
 
-> Esta entrega (1º bimestre) cobre a base: interface, navegação, SQLite e Supabase. A
-> identificação por **IA de visão** é o tema do 2º bimestre, mas já foi adiantada como bônus —
-> veja [Identificação por IA](#identificação-por-ia-bônus-adiantado-do-2º-bimestre). Sem ela configurada, o app usa um
+> A identificação por IA é opcional (veja a nota no topo). Sem ela configurada, o app usa um
 > provedor simulado determinístico (a mesma foto sempre devolve o mesmo item), então o fluxo
 > funciona de ponta a ponta offline mesmo sem a IA ligada.
 
