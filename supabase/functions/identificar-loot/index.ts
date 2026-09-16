@@ -136,6 +136,37 @@ function primeiraFrase(texto: string): string {
   return (fim > 0 ? limpo.slice(0, fim) : limpo).slice(0, 60).trim();
 }
 
+/**
+ * Tira o texto da resposta, seja qual for o formato.
+ *
+ * `message.content` costuma ser uma string, mas alguns modelos devolvem uma
+ * lista de partes (`[{type:'text',text:'...'}]`) e os de raciocínio às vezes
+ * deixam `content` vazio e põem tudo em `reasoning`. Assumir só o primeiro
+ * formato foi o que fez a função responder "resposta vazia".
+ */
+function extrairConteudo(dados: unknown): string {
+  const mensagem = (dados as { choices?: { message?: Record<string, unknown> }[] })?.choices?.[0]
+    ?.message;
+  if (!mensagem) return '';
+
+  const { content, reasoning } = mensagem as { content?: unknown; reasoning?: unknown };
+
+  if (typeof content === 'string' && content.trim()) return content;
+
+  if (Array.isArray(content)) {
+    const texto = content
+      .map((parte) => (typeof parte === 'string' ? parte : ((parte as { text?: string })?.text ?? '')))
+      .join('')
+      .trim();
+    if (texto) return texto;
+  }
+
+  // Último recurso: o JSON pode ter saído junto do raciocínio.
+  if (typeof reasoning === 'string' && reasoning.trim()) return reasoning;
+
+  return '';
+}
+
 /* ------------------------------------------------------------------ *
  * Handler
  * ------------------------------------------------------------------ */
@@ -207,7 +238,14 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: MODELO,
-        max_tokens: 400,
+
+        // Vários modelos com visão do OpenRouter — inclusive todos os gratuitos —
+        // são de raciocínio: gastam tokens "pensando" antes de escrever. Com um
+        // teto apertado, o raciocínio consome tudo e `content` volta vazio.
+        // Escolher entre 53 itens não precisa de cadeia de pensamento, então
+        // pedimos para desligar; e o teto fica folgado para quem ignorar o pedido.
+        max_tokens: 1500,
+        reasoning: { enabled: false },
         messages: [
           { role: 'system', content: SISTEMA },
           {
@@ -243,9 +281,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const dados = await resposta.json();
-    const conteudo = dados?.choices?.[0]?.message?.content;
-    if (typeof conteudo !== 'string') {
-      return json({ erro: 'Resposta do modelo veio vazia.' }, 502);
+    const conteudo = extrairConteudo(dados);
+
+    if (!conteudo) {
+      // Sem texto em nenhum dos formatos conhecidos: o motivo costuma estar em
+      // `finish_reason` (`length` = teto de tokens estourado).
+      const motivo = dados?.choices?.[0]?.finish_reason ?? 'desconhecido';
+      console.error('[identificar-loot] sem conteudo, finish_reason:', motivo, JSON.stringify(dados).slice(0, 400));
+      return json({ erro: `O modelo não devolveu texto (motivo: ${motivo}).` }, 502);
     }
 
     const bruto = extrairJson(conteudo);
