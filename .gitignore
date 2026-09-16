@@ -43,3 +43,8 @@ yarn-error.*
 # Supabase (nao versionar)
 .env
 .env.local
+
+# Supabase CLI (temporarios)
+supabase/.temp/
+supabase/.branches/
+supabase/.env

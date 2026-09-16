@@ -1,11 +1,12 @@
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { MuralCard } from '../../src/components/LootCard';
 import { Notice, TextField } from '../../src/components/form';
-import { Button, EmptyState, Label } from '../../src/components/ui';
+import { ICON } from '../../src/components/icons';
+import { EmptyState, Label } from '../../src/components/ui';
 import * as repo from '../../src/db/lootRepo';
 import { MuralItem } from '../../src/domain/types';
 import { useAuth } from '../../src/hooks/useAuth';
@@ -64,23 +65,10 @@ export default function MuralScreen() {
     return (
       <View style={styles.centro}>
         <EmptyState
-          emblem="🔌"
-          title="Supabase não configurado"
-          description="Copie o arquivo .env.example para .env, preencha a URL e a chave anon do seu projeto Supabase e reinicie com: npx expo start --clear"
+          icon="cloud-off-outline"
+          title="Mural indisponível"
+          description="Não foi possível conectar ao mural agora. Seus itens continuam salvos neste aparelho."
         />
-      </View>
-    );
-  }
-
-  if (!session) {
-    return (
-      <View style={styles.centro}>
-        <EmptyState
-          emblem="📜"
-          title="Mural da instituição"
-          description="Entre na sua conta para ver tudo que foi achado por outras pessoas e publicar os seus registros."
-        />
-        <Button label="Entrar / criar conta" onPress={() => router.push('/login')} />
       </View>
     );
   }
@@ -89,6 +77,7 @@ export default function MuralScreen() {
     <View style={styles.tela}>
       <View style={styles.cabecalho}>
         <TextField
+          icon={ICON.buscar}
           placeholder="Perdeu algo? Busque por item, local ou pessoa…"
           value={busca}
           onChangeText={setBusca}
@@ -103,7 +92,7 @@ export default function MuralScreen() {
         data={itens}
         keyExtractor={(item) => item.remoteId}
         contentContainerStyle={styles.lista}
-        renderItem={({ item }) => <MuralCard item={item} />}
+        renderItem={({ item, index }) => <MuralCard item={item} index={index} />}
         refreshControl={
           <RefreshControl
             refreshing={atualizando}
@@ -114,7 +103,7 @@ export default function MuralScreen() {
         }
         ListEmptyComponent={
           <EmptyState
-            emblem="🗺️"
+            icon={busca ? ICON.nadaEncontrado : ICON.vazioMural}
             title={busca ? 'Nada encontrado' : 'Mural vazio'}
             description={
               busca

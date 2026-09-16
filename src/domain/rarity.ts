@@ -1,3 +1,4 @@
+import type { IconName } from '../components/icons';
 import { CategoryId, RarityId } from './types';
 
 export interface RarityDef {
@@ -9,6 +10,7 @@ export interface RarityDef {
   /** Fundo translúcido usado nos cards e selos. */
   tint: string;
   xp: number;
+  icon: IconName;
 }
 
 export const RARITIES: Record<RarityId, RarityDef> = {
@@ -19,6 +21,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#9AA0C0',
     tint: 'rgba(154,160,192,0.14)',
     xp: 10,
+    icon: 'circle-outline',
   },
   incomum: {
     id: 'incomum',
@@ -27,6 +30,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#4BC58A',
     tint: 'rgba(75,197,138,0.14)',
     xp: 20,
+    icon: 'hexagon-outline',
   },
   raro: {
     id: 'raro',
@@ -35,6 +39,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#4C8DE2',
     tint: 'rgba(76,141,226,0.16)',
     xp: 40,
+    icon: 'rhombus-outline',
   },
   epico: {
     id: 'epico',
@@ -43,6 +48,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#A45CE8',
     tint: 'rgba(164,92,232,0.16)',
     xp: 70,
+    icon: 'star-four-points-outline',
   },
   lendario: {
     id: 'lendario',
@@ -51,6 +57,7 @@ export const RARITIES: Record<RarityId, RarityDef> = {
     color: '#E8B84B',
     tint: 'rgba(232,184,75,0.18)',
     xp: 120,
+    icon: 'diamond-stone',
   },
 };
 
@@ -89,4 +96,25 @@ export const CATEGORY_ORDER: CategoryId[] = [
 
 export function rarityOf(category: CategoryId, override?: RarityId): RarityId {
   return override ?? CATEGORIES[category].rarity;
+}
+
+/**
+ * Aplica a raridade sugerida pela IA, mas no máximo um degrau acima ou abaixo
+ * da raridade do catálogo.
+ *
+ * A IA enxerga o estado real do objeto — um notebook surrado não é a mesma coisa
+ * que um lacrado —, e deixá-la opinar é o que torna o escaneamento divertido.
+ * Mas dar controle total quebraria duas coisas: a coleção deixaria de ser
+ * consistente (o mesmo tipo de item viria com raridades diferentes a cada foto)
+ * e o XP viraria sorteio. O limite de um degrau mantém as duas pontas.
+ */
+export function clampRarity(base: RarityId, sugerida?: RarityId | null): RarityId {
+  if (!sugerida) return base;
+
+  const iBase = RARITY_ORDER.indexOf(base);
+  const iSugerida = RARITY_ORDER.indexOf(sugerida);
+  if (iBase < 0 || iSugerida < 0) return base;
+
+  const limitada = Math.min(Math.max(iSugerida, iBase - 1), iBase + 1);
+  return RARITY_ORDER[limitada];
 }

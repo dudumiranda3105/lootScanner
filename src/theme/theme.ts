@@ -38,7 +38,35 @@ export const radius = {
   pill: 999,
 } as const;
 
+/**
+ * Os nomes precisam ser exatamente as chaves passadas ao `useFonts` no layout
+ * raiz (app/_layout.tsx) — é assim que o React Native encontra a família.
+ */
 export const font = {
-  /** Fonte monoespaçada dá o ar de "terminal / ficha de personagem". */
-  mono: 'monospace',
+  /** Títulos e nomes de item: serifada, com ar de placa de RPG. */
+  display: 'Cinzel_700Bold',
+  /** Números, selos e dados de ficha: o ar de terminal. */
+  mono: 'JetBrainsMono_400Regular',
+  monoBold: 'JetBrainsMono_700Bold',
+} as const;
+
+/**
+ * Sombra colorida usada para dar "brilho" na cor da raridade.
+ * No Android só a `elevation` tem efeito, por isso o valor vai junto.
+ */
+export function glow(color: string, intensity = 0.5) {
+  return {
+    shadowColor: color,
+    shadowOpacity: intensity,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  } as const;
+}
+
+/** Duração padrão das animações, em milissegundos. */
+export const motion = {
+  fast: 140,
+  normal: 240,
+  slow: 420,
 } as const;

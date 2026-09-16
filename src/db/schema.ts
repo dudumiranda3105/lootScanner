@@ -5,7 +5,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
  * bloco `if (version === N)` em `migrate` — nunca edite um bloco já publicado,
  * senão os aparelhos que já rodaram a versão anterior ficam inconsistentes.
  */
-export const DATABASE_VERSION = 1;
+export const DATABASE_VERSION = 2;
 
 export const DATABASE_NAME = 'lootscanner.db';
 
@@ -52,6 +52,7 @@ export async function migrate(db: SQLiteDatabase): Promise<void> {
         remote_id   TEXT    PRIMARY KEY NOT NULL,
         owner_id    TEXT    NOT NULL,
         finder_name TEXT    NOT NULL DEFAULT '',
+        catalog_id  TEXT    NOT NULL DEFAULT 'desconhecido',
         name        TEXT    NOT NULL,
         category    TEXT    NOT NULL,
         rarity      TEXT    NOT NULL,
@@ -73,6 +74,15 @@ export async function migrate(db: SQLiteDatabase): Promise<void> {
       );
     `);
     version = 1;
+  }
+
+  if (version === 1) {
+    // O mural passou a mostrar o icone vetorial do item, que e derivado do
+    // catalogo — por isso o cache precisa guardar de qual item se trata.
+    await db.execAsync(
+      "ALTER TABLE mural_cache ADD COLUMN catalog_id TEXT NOT NULL DEFAULT 'desconhecido';",
+    );
+    version = 2;
   }
 
   await db.execAsync(`PRAGMA user_version = ${version}`);

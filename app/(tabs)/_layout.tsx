@@ -1,28 +1,53 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Loading } from '../../src/components/form';
+import { ICON } from '../../src/components/icons';
+import { Icon } from '../../src/components/ui';
+import { useAuth } from '../../src/hooks/useAuth';
 import { colors, font } from '../../src/theme/theme';
 
-/** Ícone das abas: emoji em vez de uma biblioteca de ícones, para não pesar o bundle. */
-function TabEmblem({ emblem, focused }: { emblem: string; focused: boolean }) {
-  return <Text style={[styles.emblem, focused && styles.emblemFocused]}>{emblem}</Text>;
-}
+/** Altura da barra sem contar a folga do sistema. */
+const ALTURA_ABAS = 62;
 
 export default function TabsLayout() {
+  const { ready, session } = useAuth();
+
+  // O Android desenha o app por baixo da barra de navegação (edge-to-edge).
+  // Sem somar essa folga, os ícones das abas ficam atrás dos botões do sistema
+  // — e uma `height` fixa anula o ajuste que a navegação faria sozinha.
+  const insets = useSafeAreaInsets();
+
+  // A sessão fica guardada no aparelho, então quem já entrou uma vez abre
+  // direto — inclusive sem internet. `ready` evita o piscar da tela de login
+  // enquanto a sessão salva ainda está sendo lida.
+  if (!ready) return <Loading />;
+  if (!session) return <Redirect href="/login" />;
+
   return (
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.bgElevated },
         headerTintColor: colors.text,
-        headerTitleStyle: { color: colors.text, fontWeight: '800', letterSpacing: 0.5 },
+        headerTitleStyle: {
+          color: colors.text,
+          fontFamily: font.display,
+          fontSize: 17,
+          letterSpacing: 0.5,
+        },
+        headerShadowVisible: false,
         tabBarStyle: {
           backgroundColor: colors.bgElevated,
           borderTopColor: colors.border,
+          height: ALTURA_ABAS + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: 6,
         },
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarLabelStyle: { fontFamily: font.mono, fontSize: 11, fontWeight: '700' },
+        tabBarLabelStyle: { fontFamily: font.monoBold, fontSize: 10 },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
@@ -30,7 +55,9 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Inventário',
-          tabBarIcon: ({ focused }) => <TabEmblem emblem="🎒" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <Icon name={ICON.inventario} size={size - 2} color={color} />
+          ),
         }}
       />
 
@@ -38,7 +65,9 @@ export default function TabsLayout() {
         name="scan"
         options={{
           title: 'Escanear',
-          tabBarIcon: ({ focused }) => <TabEmblem emblem="📷" focused={focused} />,
+          tabBarIcon: ({ color, size }) => (
+            <Icon name={ICON.escanear} size={size - 2} color={color} />
+          ),
         }}
       />
 
@@ -46,7 +75,7 @@ export default function TabsLayout() {
         name="mural"
         options={{
           title: 'Mural',
-          tabBarIcon: ({ focused }) => <TabEmblem emblem="📜" focused={focused} />,
+          tabBarIcon: ({ color, size }) => <Icon name={ICON.mural} size={size - 2} color={color} />,
         }}
       />
 
@@ -54,19 +83,9 @@ export default function TabsLayout() {
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ focused }) => <TabEmblem emblem="🛡️" focused={focused} />,
+          tabBarIcon: ({ color, size }) => <Icon name={ICON.perfil} size={size - 2} color={color} />,
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  emblem: {
-    fontSize: 20,
-    opacity: 0.5,
-  },
-  emblemFocused: {
-    opacity: 1,
-  },
-});

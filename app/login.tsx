@@ -1,10 +1,12 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Notice, TextField } from '../src/components/form';
-import { Body, Button, Card, Divider, Label, Title } from '../src/components/ui';
+import { ICON } from '../src/components/icons';
+import { Body, Button, Card, Divider, Icon, Label, Title } from '../src/components/ui';
 import { useAuth } from '../src/hooks/useAuth';
 import { useInventory } from '../src/hooks/useInventory';
 import { supabase } from '../src/services/supabase';
@@ -15,7 +17,9 @@ type Modo = 'entrar' | 'cadastrar';
 
 export default function LoginScreen() {
   const db = useSQLiteContext();
-  const { signIn, signUp, configured } = useAuth();
+  const { signIn, signUp, configured, session } = useAuth();
+  // Tela cheia e sem cabeçalho: a folga do sistema fica por nossa conta.
+  const insets = useSafeAreaInsets();
   const { refresh } = useInventory();
 
   const [modo, setModo] = useState<Modo>('entrar');
@@ -41,12 +45,16 @@ export default function LoginScreen() {
       await syncNow(db, data.user?.id ?? null);
       await refresh();
 
-      router.back();
+      // O redirect abaixo assume daqui — nada de `router.back()`, porque esta
+      // tela é a primeira da pilha quando ninguém está logado.
     } catch (error) {
       setErro(error instanceof Error ? error.message : String(error));
       setEnviando(false);
     }
   }, [modo, email, senha, nomeCacador, signIn, signUp, db, refresh]);
+
+  // Já logado: esta tela não deve mais aparecer.
+  if (session) return <Redirect href="/(tabs)" />;
 
   if (!configured) {
     return (
@@ -72,8 +80,18 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.tela}
     >
-      <ScrollView contentContainerStyle={styles.conteudo} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.conteudo,
+          { paddingTop: spacing.lg + insets.top, paddingBottom: spacing.lg + insets.bottom },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <Card style={styles.cartao}>
+          <View style={styles.brasao}>
+            <Icon name="crown-outline" size={30} color={colors.gold} />
+          </View>
+
           <Label>{cadastrando ? 'Nova conta' : 'Bem-vindo de volta'}</Label>
           <Title>{cadastrando ? 'Criar caçador' : 'Entrar'}</Title>
           <Body>
@@ -86,6 +104,7 @@ export default function LoginScreen() {
           {cadastrando ? (
             <TextField
               label="Nome de caçador"
+              icon="account-outline"
               placeholder="Como você aparece no mural"
               value={nomeCacador}
               onChangeText={setNomeCacador}
@@ -95,6 +114,7 @@ export default function LoginScreen() {
 
           <TextField
             label="E-mail"
+            icon="email-outline"
             placeholder="voce@escola.edu.br"
             value={email}
             onChangeText={setEmail}
@@ -106,6 +126,7 @@ export default function LoginScreen() {
 
           <TextField
             label="Senha"
+            icon="lock-outline"
             placeholder="mínimo de 6 caracteres"
             value={senha}
             onChangeText={setSenha}
@@ -117,6 +138,7 @@ export default function LoginScreen() {
 
           <Button
             label={cadastrando ? 'Criar conta' : 'Entrar'}
+            icon={cadastrando ? 'account-plus-outline' : ICON.entrar}
             onPress={enviar}
             loading={enviando}
             disabled={!email.trim() || senha.length < 6}
@@ -148,5 +170,16 @@ const styles = StyleSheet.create({
   },
   cartao: {
     gap: spacing.md,
+  },
+  brasao: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    borderColor: colors.goldDim,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 62,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    width: 62,
   },
 });

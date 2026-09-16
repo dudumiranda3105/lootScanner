@@ -1,7 +1,7 @@
-import { CATALOG, COLLECTIBLES, getCatalogEntry } from '../domain/catalog';
-import { RarityId } from '../domain/types';
-import { VisionResult } from '../domain/types';
-import { catalogRarity } from '../domain/catalog';
+import { CATALOG, COLLECTIBLES, catalogRarity, getCatalogEntry } from '../domain/catalog';
+import { RarityId, VisionResult } from '../domain/types';
+import { modeloAtual } from './modeloIA';
+import { isSupabaseConfigured, requireSupabase } from './supabase';
 
 export interface VisionInput {
   uri: string;
@@ -188,20 +188,122 @@ export function createRemoteVisionProvider(endpoint: string): VisionProvider {
  * Seleção do provedor ativo
  * ------------------------------------------------------------------ */
 
+/**
+ * Provedor de verdade: manda a foto para a Edge Function `identificar-loot`,
+ * que chama o OpenRouter. A chave da IA vive lá, como secret do projeto — nunca
+ * dentro do app.
+ *
+ * O `functions.invoke` anexa sozinho o JWT da sessão. Sem login ele manda só a
+ * chave publishable, e a função responde 401 — de propósito: ela confere que
+ * existe um usuário de verdade, não apenas um JWT qualquer. Nesse caso o
+ * `identifyItem` cai no provedor simulado.
+ */
+export const supabaseVisionProvider: VisionProvider = {
+  id: 'supabase',
+
+  async identify(input) {
+    if (!input.base64) throw new Error('A identificação por IA precisa da foto em base64.');
+    const client = requireSupabase();
+
+    const { data, error } = await client.functions.invoke('identificar-loot', {
+      body: {
+        imagemBase64: input.base64,
+        mimeType: 'image/jpeg',
+        // A função só aceita ids da lista permitida; qualquer outro cai no padrão.
+        modelo: modeloAtual().id,
+      },
+    });
+
+    if (error) throw await detalharErro(error);
+    if (data?.erro) throw new Error(String(data.erro));
+
+    const guesses = Array.isArray(data?.guesses) ? data.guesses : [];
+    if (guesses.length === 0) throw new Error('A IA não devolveu nenhum palpite.');
+
+    return {
+      provider: String(data.provider ?? 'supabase'),
+      guesses,
+      rarityHint: (data.rarityHint ?? null) as RarityId | null,
+      flavor: typeof data.flavor === 'string' ? data.flavor : undefined,
+      descricao: typeof data.descricao === 'string' ? data.descricao : undefined,
+    };
+  },
+};
+
+/* ------------------------------------------------------------------ *
+ * Seleção do provedor ativo
+ * ------------------------------------------------------------------ */
+
+/**
+ * Abre o erro do `functions.invoke`.
+ *
+ * Um `FunctionsHttpError` traz só "Edge Function returned a non-2xx status
+ * code" na mensagem — o motivo de verdade fica no corpo da resposta, guardado
+ * em `context`. Sem desempacotar isso, todo problema da função (sem login,
+ * crédito zerado, chave errada) vira o mesmo texto genérico no console.
+ */
+async function detalharErro(error: unknown): Promise<Error> {
+  const contexto = (error as { context?: Response })?.context;
+
+  if (contexto && typeof contexto.json === 'function') {
+    const corpo = await contexto.json().catch(() => null);
+    const detalhe = corpo?.erro ?? (corpo ? JSON.stringify(corpo) : 'sem corpo');
+    return new Error(`a função respondeu ${contexto.status} — ${detalhe}`);
+  }
+
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+/** Teto para a identificação por IA. Acima disso, o simulado assume. */
+const TEMPO_LIMITE_MS = 30_000;
+
+/** Rejeita se a promessa não resolver a tempo. O trabalho em si segue solto. */
+function comPrazo<T>(promessa: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promessa,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Tempo esgotado (${ms / 1000}s).`)), ms),
+    ),
+  ]);
+}
+
 const REMOTE_ENDPOINT = process.env.EXPO_PUBLIC_VISION_ENDPOINT;
+
+/** `true` quando o app deve tentar a IA de verdade antes de cair no simulado. */
+export const visionUsaIA = Boolean(REMOTE_ENDPOINT) || isSupabaseConfigured;
 
 export const visionProvider: VisionProvider = REMOTE_ENDPOINT
   ? createRemoteVisionProvider(REMOTE_ENDPOINT)
-  : mockVisionProvider;
+  : isSupabaseConfigured
+    ? supabaseVisionProvider
+    : mockVisionProvider;
 
-/** Executa a identificação e nunca rejeita: em caso de falha devolve "item misterioso". */
+/**
+ * Executa a identificação e nunca rejeita.
+ *
+ * Se a IA falhar — sem internet, sem login, chave não configurada, função fora
+ * do ar — cai no provedor simulado em vez de devolver "item misterioso". O
+ * fluxo do app continua inteiro e a demonstração nunca trava por causa da rede.
+ */
 export async function identifyItem(input: VisionInput): Promise<VisionResult> {
   try {
-    const result = await visionProvider.identify(input);
+    // O teto é obrigatório: `functions.invoke` não tem timeout próprio, e uma
+    // chamada que nunca volta deixaria a tela de "analisando" girando para
+    // sempre — sem erro no console e sem saída para o usuário.
+    const result = await comPrazo(visionProvider.identify(input), TEMPO_LIMITE_MS);
     if (result.guesses.length > 0) return result;
   } catch (error) {
-    console.warn('[vision] falha ao identificar item:', error);
+    console.warn('[vision] a identificação por IA falhou, usando o simulado:', error);
   }
+
+  if (visionProvider.id !== mockVisionProvider.id) {
+    try {
+      return await mockVisionProvider.identify(input);
+    } catch (error) {
+      console.warn('[vision] o provedor simulado também falhou:', error);
+    }
+  }
+
   return { provider: visionProvider.id, guesses: [{ catalogId: 'desconhecido', confidence: 0 }] };
 }
 

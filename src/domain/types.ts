@@ -1,3 +1,5 @@
+import type { IconName } from '../components/icons';
+
 export type RarityId = 'comum' | 'incomum' | 'raro' | 'epico' | 'lendario';
 
 export type CategoryId =
@@ -14,6 +16,8 @@ export interface CatalogEntry {
   name: string;
   category: CategoryId;
   emblem: string;
+  /** Ícone vetorial do item (MaterialCommunityIcons). */
+  icon: IconName;
   /** Rótulos que um classificador de imagem costuma devolver para este item. */
   keywords: string[];
   /** Sobrepõe a raridade padrão da categoria (ex.: notebook é lendário). */
@@ -57,6 +61,8 @@ export interface MuralItem {
   ownerId: string;
   /** Nome de caçador de quem achou o item. */
   finderName: string;
+  /** Id no catalogo — usado para achar o ícone do item. */
+  catalogId: string;
   name: string;
   category: CategoryId;
   rarity: RarityId;
@@ -80,4 +86,18 @@ export interface VisionResult {
   guesses: VisionGuess[];
   /** Identificador do provedor que produziu o resultado (para depuração). */
   provider: string;
+  /**
+   * Raridade sugerida pelo modelo. É só uma sugestão: o app limita o quanto ela
+   * pode se afastar da raridade do catálogo (veja `clampRarity`), senão o mesmo
+   * objeto valeria XP diferente a cada escaneamento.
+   */
+  rarityHint?: RarityId | null;
+  /** Frase curta, no tom de RPG, descrevendo o objeto. Só enfeite. */
+  flavor?: string;
+  /**
+   * O nome real do objeto, em 1 a 3 palavras. Importa quando o item cai em
+   * "desconhecido": é o que permite registrar coisas fora do catálogo com um
+   * nome útil, em vez de "Item misterioso".
+   */
+  descricao?: string;
 }

@@ -1,11 +1,16 @@
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { getCatalogEntry } from '../domain/catalog';
 import { RARITIES } from '../domain/rarity';
-import { LootItem, MuralItem } from '../domain/types';
-import { colors, font, radius, spacing } from '../theme/theme';
+import { LootItem, MuralItem, RarityId } from '../domain/types';
+import { colors, font, glow, radius, spacing } from '../theme/theme';
 import { SyncPill } from './form';
-import { RarityBadge } from './ui';
+import { ICON } from './icons';
+import { Icon, RarityBadge } from './ui';
 
 /** "há 5 min", "ontem", "12/03" — data curta, em português. */
 export function tempoRelativo(millis: number): string {
@@ -22,24 +27,47 @@ export function tempoRelativo(millis: number): string {
   return new Date(millis).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-/** Miniatura do item: a foto quando existe, o emblema do catálogo quando não. */
+/** A entrada escalonada só vale para os primeiros cards; depois vira atraso demais. */
+const entrada = (index: number) => FadeInDown.delay(Math.min(index, 8) * 45).duration(260);
+
+/**
+ * Miniatura do item: a foto quando existe, o ícone do catálogo quando não.
+ * O `expo-image` traz cache em disco e transição suave — importa no mural,
+ * onde as fotos vêm da rede.
+ */
 function Thumb({
   photo,
-  emblem,
-  color,
+  catalogId,
+  rarity,
 }: {
   photo: string | null;
-  emblem: string;
-  color: string;
+  catalogId: string;
+  rarity: RarityId;
 }) {
+  const cor = RARITIES[rarity].color;
+
   return (
-    <View style={[styles.thumb, { borderColor: color }]}>
+    <View style={[styles.thumb, { borderColor: cor }, glow(cor, 0.35)]}>
       {photo ? (
-        <Image source={{ uri: photo }} style={styles.thumbImage} resizeMode="cover" />
+        <Image source={{ uri: photo }} style={styles.thumbImage} contentFit="cover" transition={180} cachePolicy="memory-disk" />
       ) : (
-        <Text style={styles.thumbEmblem}>{emblem}</Text>
+        <Icon name={getCatalogEntry(catalogId).icon} size={28} color={cor} />
       )}
     </View>
+  );
+}
+
+/** Véu de cor da raridade atrás do conteúdo, da esquerda para a direita. */
+function Veu({ rarity }: { rarity: RarityId }) {
+  const cor = RARITIES[rarity].color;
+  return (
+    <LinearGradient
+      colors={[`${cor}26`, `${cor}0A`, 'transparent']}
+      start={{ x: 0, y: 0.5 }}
+      end={{ x: 1, y: 0.5 }}
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+    />
   );
 }
 
@@ -47,41 +75,56 @@ function Thumb({
  * Item do inventário
  * ---------------------------------------------------------------- */
 
-export function LootCard({ item, onPress }: { item: LootItem; onPress: () => void }) {
+export function LootCard({
+  item,
+  index = 0,
+  onPress,
+}: {
+  item: LootItem;
+  index?: number;
+  onPress: () => void;
+}) {
   const rarity = RARITIES[item.rarity];
   const devolvido = item.status === 'devolvido';
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        { borderColor: rarity.color, backgroundColor: rarity.tint },
-        pressed && styles.pressed,
-      ]}
-    >
-      <Thumb photo={item.photoUri} emblem={item.emblem} color={rarity.color} />
+    <Animated.View entering={entrada(index)}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.card,
+          { borderColor: rarity.color },
+          pressed && styles.pressed,
+        ]}
+      >
+        <Veu rarity={item.rarity} />
 
-      <View style={styles.body}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.name, devolvido && styles.nameReturned]} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.time}>{tempoRelativo(item.createdAt)}</Text>
+        <Thumb photo={item.photoUri} catalogId={item.catalogId} rarity={item.rarity} />
+
+        <View style={styles.body}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.name, devolvido && styles.nameReturned]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.time}>{tempoRelativo(item.createdAt)}</Text>
+          </View>
+
+          <Local texto={item.foundAt} />
+
+          <View style={styles.metaRow}>
+            <RarityBadge rarity={item.rarity} size="sm" />
+            <SyncPill state={item.syncState} shared={item.shared} />
+            {devolvido ? (
+              <View style={styles.devolvido}>
+                <Icon name={ICON.devolver} size={10} color={colors.success} />
+                <Text style={styles.devolvidoTexto}>devolvido</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
-
-        <Text style={styles.place} numberOfLines={1}>
-          {item.foundAt ? `📍 ${item.foundAt}` : 'local não informado'}
-        </Text>
-
-        <View style={styles.metaRow}>
-          <RarityBadge rarity={item.rarity} size="sm" />
-          <SyncPill state={item.syncState} shared={item.shared} />
-          {devolvido ? <Text style={styles.returned}>✓ devolvido</Text> : null}
-        </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -89,13 +132,15 @@ export function LootCard({ item, onPress }: { item: LootItem; onPress: () => voi
  * Item do mural coletivo
  * ---------------------------------------------------------------- */
 
-export function MuralCard({ item }: { item: MuralItem }) {
+export function MuralCard({ item, index = 0 }: { item: MuralItem; index?: number }) {
   const rarity = RARITIES[item.rarity];
   const devolvido = item.status === 'devolvido';
 
   return (
-    <View style={[styles.card, { borderColor: rarity.color, backgroundColor: rarity.tint }]}>
-      <Thumb photo={item.photoUrl} emblem={item.emblem} color={rarity.color} />
+    <Animated.View entering={entrada(index)} style={[styles.card, { borderColor: rarity.color }]}>
+      <Veu rarity={item.rarity} />
+
+      <Thumb photo={item.photoUrl} catalogId={item.catalogId} rarity={item.rarity} />
 
       <View style={styles.body}>
         <View style={styles.titleRow}>
@@ -105,9 +150,7 @@ export function MuralCard({ item }: { item: MuralItem }) {
           <Text style={styles.time}>{tempoRelativo(item.createdAt)}</Text>
         </View>
 
-        <Text style={styles.place} numberOfLines={1}>
-          {item.foundAt ? `📍 ${item.foundAt}` : 'local não informado'}
-        </Text>
+        <Local texto={item.foundAt} />
 
         {item.note ? (
           <Text style={styles.note} numberOfLines={2}>
@@ -120,19 +163,37 @@ export function MuralCard({ item }: { item: MuralItem }) {
           <Text style={styles.finder} numberOfLines={1}>
             achado por {item.finderName}
           </Text>
-          {devolvido ? <Text style={styles.returned}>✓ devolvido</Text> : null}
+          {devolvido ? (
+            <View style={styles.devolvido}>
+              <Icon name={ICON.devolver} size={10} color={colors.success} />
+              <Text style={styles.devolvidoTexto}>devolvido</Text>
+            </View>
+          ) : null}
         </View>
       </View>
+    </Animated.View>
+  );
+}
+
+function Local({ texto }: { texto: string }) {
+  return (
+    <View style={styles.localRow}>
+      <Icon name={ICON.local} size={12} color={colors.textFaint} />
+      <Text style={styles.place} numberOfLines={1}>
+        {texto || 'local não informado'}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
+    overflow: 'hidden',
     padding: spacing.md,
   },
   pressed: {
@@ -152,9 +213,6 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
   },
-  thumbEmblem: {
-    fontSize: 28,
-  },
   body: {
     flex: 1,
     gap: 4,
@@ -168,8 +226,8 @@ const styles = StyleSheet.create({
   name: {
     color: colors.text,
     flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
+    fontFamily: font.display,
+    fontSize: 15,
   },
   nameReturned: {
     textDecorationLine: 'line-through',
@@ -179,8 +237,14 @@ const styles = StyleSheet.create({
     fontFamily: font.mono,
     fontSize: 10,
   },
+  localRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
   place: {
     color: colors.textMuted,
+    flex: 1,
     fontSize: 12,
   },
   note: {
@@ -202,10 +266,14 @@ const styles = StyleSheet.create({
     fontFamily: font.mono,
     fontSize: 10,
   },
-  returned: {
+  devolvido: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 3,
+  },
+  devolvidoTexto: {
     color: colors.success,
-    fontFamily: font.mono,
-    fontSize: 10,
-    fontWeight: '700',
+    fontFamily: font.monoBold,
+    fontSize: 9,
   },
 });

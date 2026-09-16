@@ -3,5 +3,7 @@
   "compilerOptions": {
     "strict": true
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "//": "As Edge Functions rodam em Deno, com outro runtime e outras globais. Elas têm a própria config em supabase/functions/deno.json.",
+  "exclude": ["supabase/functions"]
 }

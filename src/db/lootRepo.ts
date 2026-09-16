@@ -53,6 +53,7 @@ interface MuralRow {
   remote_id: string;
   owner_id: string;
   finder_name: string;
+  catalog_id: string;
   name: string;
   category: string;
   rarity: string;
@@ -70,6 +71,7 @@ function rowToMural(row: MuralRow): MuralItem {
     remoteId: row.remote_id,
     ownerId: row.owner_id,
     finderName: row.finder_name,
+    catalogId: row.catalog_id,
     name: row.name,
     category: row.category as CategoryId,
     rarity: row.rarity as RarityId,
@@ -292,12 +294,13 @@ export async function replaceMuralCache(db: SQLiteDatabase, items: MuralItem[]):
     for (const item of items) {
       await db.runAsync(
         `INSERT INTO mural_cache
-           (remote_id, owner_id, finder_name, name, category, rarity, emblem,
-            found_at, note, status, photo_url, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (remote_id, owner_id, finder_name, catalog_id, name, category, rarity,
+            emblem, found_at, note, status, photo_url, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         item.remoteId,
         item.ownerId,
         item.finderName,
+        item.catalogId,
         item.name,
         item.category,
         item.rarity,

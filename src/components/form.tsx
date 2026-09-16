@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 
 import { colors, font, radius, spacing } from '../theme/theme';
-import { Label } from './ui';
+import { ICON, IconName } from './icons';
+import { Icon, Label } from './ui';
 
 /* ---------------------------------------------------------------- *
  * Campo de texto
@@ -19,17 +20,23 @@ import { Label } from './ui';
 interface TextFieldProps extends TextInputProps {
   label?: string;
   hint?: string;
+  icon?: IconName;
 }
 
-export function TextField({ label, hint, style, ...props }: TextFieldProps) {
+export function TextField({ label, hint, icon, style, ...props }: TextFieldProps) {
   return (
     <View style={styles.field}>
       {label ? <Label>{label}</Label> : null}
-      <TextInput
-        placeholderTextColor={colors.textFaint}
-        {...props}
-        style={[styles.input, props.multiline && styles.inputMultiline, style]}
-      />
+
+      <View style={[styles.inputRow, props.multiline && styles.inputRowMultiline]}>
+        {icon ? <Icon name={icon} size={17} color={colors.textFaint} /> : null}
+        <TextInput
+          placeholderTextColor={colors.textFaint}
+          {...props}
+          style={[styles.input, props.multiline && styles.inputMultiline, style]}
+        />
+      </View>
+
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );
@@ -58,6 +65,7 @@ export function Toggle({ value, onChange, title, description, disabled }: Toggle
       onPress={() => !disabled && onChange(!value)}
       style={({ pressed }) => [
         styles.toggleRow,
+        value && styles.toggleRowOn,
         pressed && !disabled && styles.pressed,
         disabled && styles.toggleDisabled,
       ]}
@@ -78,28 +86,17 @@ export function Toggle({ value, onChange, title, description, disabled }: Toggle
  * Selo de sincronização
  * ---------------------------------------------------------------- */
 
-export function SyncPill({
-  state,
-  shared,
-}: {
-  state: 'pending' | 'synced';
-  shared: boolean;
-}) {
-  if (!shared) {
-    return (
-      <View style={[styles.pill, { borderColor: colors.border }]}>
-        <Text style={[styles.pillText, { color: colors.textFaint }]}>◇ só local</Text>
-      </View>
-    );
-  }
-
-  const synced = state === 'synced';
+export function SyncPill({ state, shared }: { state: 'pending' | 'synced'; shared: boolean }) {
+  const { icon, texto, cor } = !shared
+    ? { icon: ICON.syncLocal, texto: 'só local', cor: colors.textFaint }
+    : state === 'synced'
+      ? { icon: ICON.syncEnviado, texto: 'no mural', cor: colors.success }
+      : { icon: ICON.syncPendente, texto: 'pendente', cor: colors.gold };
 
   return (
-    <View style={[styles.pill, { borderColor: synced ? colors.success : colors.gold }]}>
-      <Text style={[styles.pillText, { color: synced ? colors.success : colors.gold }]}>
-        {synced ? '☁ no mural' : '↑ pendente'}
-      </Text>
+    <View style={[styles.pill, { borderColor: cor }]}>
+      <Icon name={icon} size={10} color={cor} />
+      <Text style={[styles.pillText, { color: cor }]}>{texto}</Text>
     </View>
   );
 }
@@ -109,10 +106,12 @@ export function SyncPill({
  * ---------------------------------------------------------------- */
 
 export function Notice({ tone = 'info', children }: { tone?: 'info' | 'error'; children: string }) {
-  const color = tone === 'error' ? colors.danger : colors.gold;
+  const cor = tone === 'error' ? colors.danger : colors.gold;
+
   return (
-    <View style={[styles.notice, { borderColor: color, backgroundColor: `${color}14` }]}>
-      <Text style={[styles.noticeText, { color }]}>{children}</Text>
+    <View style={[styles.notice, { borderColor: cor, backgroundColor: `${cor}14` }]}>
+      <Icon name={tone === 'error' ? ICON.erro : ICON.info} size={16} color={cor} />
+      <Text style={[styles.noticeText, { color: cor }]}>{children}</Text>
     </View>
   );
 }
@@ -134,19 +133,30 @@ const styles = StyleSheet.create({
   field: {
     gap: spacing.xs,
   },
-  input: {
+  inputRow: {
+    alignItems: 'center',
     backgroundColor: colors.bgElevated,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  inputRowMultiline: {
+    alignItems: 'flex-start',
+    paddingTop: spacing.md,
+  },
+  input: {
     color: colors.text,
+    flex: 1,
     fontSize: 15,
     minHeight: 48,
-    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
   inputMultiline: {
-    minHeight: 88,
+    minHeight: 84,
+    paddingTop: 0,
     textAlignVertical: 'top',
   },
   hint: {
@@ -162,6 +172,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
+  },
+  toggleRowOn: {
+    borderColor: colors.goldDim,
   },
   toggleDisabled: {
     opacity: 0.5,
@@ -208,23 +221,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
   },
   pill: {
+    alignItems: 'center',
     alignSelf: 'flex-start',
     borderRadius: radius.pill,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   pillText: {
-    fontFamily: font.mono,
-    fontSize: 10,
-    fontWeight: '700',
+    fontFamily: font.monoBold,
+    fontSize: 9,
   },
   notice: {
+    alignItems: 'flex-start',
     borderRadius: radius.md,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
     padding: spacing.md,
   },
   noticeText: {
+    flex: 1,
     fontSize: 13,
     lineHeight: 19,
   },
