@@ -183,3 +183,14 @@ supabase/schema.sql         script para rodar no SQL Editor do Supabase
 | "Conta criada! Confirme o e-mail…" | O **Confirm email** ainda está ligado no painel do Supabase. |
 | Login OK, mas o mural fica vazio | O `supabase/schema.sql` não foi rodado, ou rodou pela metade. Rode o script inteiro de novo. |
 | Sincronização acusa erro de permissão | As políticas de RLS não foram criadas. Rode a seção 4 do `schema.sql`. |
+
+---
+
+## Autores
+
+| Nome | GitHub |
+|---|---|
+| Eduardo Miranda | [@dudumiranda3105](https://github.com/dudumiranda3105) |
+| Eduarda Roberta Borges da Silva | [@Eduarda-Borges-Silva](https://github.com/Eduarda-Borges-Silva) |
+| Rebeca Souza Lúcio Chagas | [@RebecaSLChagas](https://github.com/RebecaSLChagas) |
+| Edson Gabriel Klippel Pereira | - |
