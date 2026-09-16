@@ -18,11 +18,26 @@
  */
 
 import { CATALOGO, IDS_VALIDOS } from './catalogo.ts';
+import { MODELO_PADRAO, MODELOS_PERMITIDOS } from './modelos.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-/** Trocável por secret — qualquer modelo com visão do OpenRouter serve. */
-const MODELO = Deno.env.get('OPENROUTER_MODEL') ?? 'anthropic/claude-sonnet-5';
+/**
+ * Modelo usado quando o app não escolhe nenhum. O secret OPENROUTER_MODEL
+ * continua valendo como sobreposição do projeto.
+ */
+const MODELO_DO_PROJETO = Deno.env.get('OPENROUTER_MODEL') ?? MODELO_PADRAO;
+
+/**
+ * Decide qual modelo atende esta requisição.
+ *
+ * O app manda a escolha do usuário, mas só ids da lista permitida passam —
+ * aceitar qualquer string daria a um app modificado o poder de pedir o modelo
+ * mais caro do catálogo, na conta do dono do projeto.
+ */
+function escolherModelo(pedido: unknown): string {
+  return typeof pedido === 'string' && MODELOS_PERMITIDOS.has(pedido) ? pedido : MODELO_DO_PROJETO;
+}
 
 const RARIDADES = ['comum', 'incomum', 'raro', 'epico', 'lendario'] as const;
 type Raridade = (typeof RARIDADES)[number];
@@ -211,11 +226,13 @@ Deno.serve(async (req: Request) => {
 
   let imagemBase64: string;
   let mimeType: string;
+  let modelo: string;
 
   try {
     const corpo = await req.json();
     imagemBase64 = String(corpo.imagemBase64 ?? '');
     mimeType = String(corpo.mimeType ?? 'image/jpeg');
+    modelo = escolherModelo(corpo.modelo);
   } catch {
     return json({ erro: 'Corpo inválido: esperado JSON.' }, 400);
   }
@@ -237,7 +254,7 @@ Deno.serve(async (req: Request) => {
         'X-Title': 'LootScanner',
       },
       body: JSON.stringify({
-        model: MODELO,
+        model: modelo,
 
         // Vários modelos com visão do OpenRouter — inclusive todos os gratuitos —
         // são de raciocínio: gastam tokens "pensando" antes de escrever. Com um
@@ -298,7 +315,7 @@ Deno.serve(async (req: Request) => {
       // um "desconhecido" com uma pista do que um erro na cara do usuário.
       console.error('[identificar-loot] resposta sem JSON:', conteudo.slice(0, 300));
       return json({
-        provider: `openrouter:${MODELO}`,
+        provider: `openrouter:${modelo}`,
         guesses: [{ catalogId: 'desconhecido', confidence: 0 }],
         rarityHint: null,
         flavor: '',
@@ -327,7 +344,7 @@ Deno.serve(async (req: Request) => {
       typeof bruto.descricao === 'string' ? bruto.descricao.slice(0, 60).trim() : '';
 
     return json({
-      provider: `openrouter:${MODELO}`,
+      provider: `openrouter:${modelo}`,
       guesses: [
         { catalogId: item, confidence: confianca },
         ...alternativas.map((id, i) => ({

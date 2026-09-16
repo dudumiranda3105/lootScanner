@@ -25,10 +25,11 @@ A camada de gamificação — raridade, inventário, XP, coleção — não muda
 Ela existe para tornar o ato de registrar mais engajante, o que aumenta a chance de as pessoas
 realmente cadastrarem o que encontram.
 
-> A identificação por **IA de visão** já está implementada — veja
-> [Identificação por IA](#identificação-por-ia-opcional). Sem ela configurada, o app usa um
+> Esta entrega (1º bimestre) cobre a base: interface, navegação, SQLite e Supabase. A
+> identificação por **IA de visão** é o tema do 2º bimestre, mas já foi adiantada como bônus —
+> veja [Identificação por IA](#identificação-por-ia-bônus-adiantado-do-2º-bimestre). Sem ela configurada, o app usa um
 > provedor simulado determinístico (a mesma foto sempre devolve o mesmo item), então o fluxo
-> funciona de ponta a ponta offline.
+> funciona de ponta a ponta offline mesmo sem a IA ligada.
 
 ## Como rodar
 
@@ -140,7 +141,7 @@ Ela **nunca lança exceção** — sem rede ou sem login, devolve o motivo e o a
 
 ---
 
-## Identificação por IA (opcional)
+## Identificação por IA (bônus adiantado do 2º bimestre)
 
 O app aponta a câmera para o objeto e a IA diz **o que é** e **quão raro parece**. Sem isso
 configurado, nada quebra: o provedor simulado assume e o fluxo continua idêntico.
@@ -185,6 +186,20 @@ app  ──foto (base64) + JWT──▶  Edge Function  ──chave no servidor�
 Pronto — o app passa a usar a IA automaticamente **assim que você estiver logado** (sem login a
 função responde 401, por segurança).
 
+### Escolher o modelo
+
+Em **Perfil ▸ Identificação automática** dá para trocar o modelo sem mexer em código. A lista
+fica em [`src/domain/modelosIA.ts`](src/domain/modelosIA.ts) e traz opções gratuitas e pagas.
+
+> A escolha vai do app para a função, que só aceita ids da **lista permitida** gerada a partir
+> desse arquivo. Sem esse filtro, um app modificado poderia pedir o modelo mais caro do catálogo
+> do OpenRouter e torrar o seu crédito. Depois de editar a lista, rode `npm run gen:edge`.
+
+Os gratuitos têm limite diário e erram mais. Vale saber de uma armadilha: **quase todo modelo
+gratuito com visão é de raciocínio** — gasta tokens "pensando" antes de responder. Por isso a
+função pede `reasoning` desligado e usa um teto de tokens folgado; com teto apertado, a resposta
+volta vazia.
+
 ### Sem crédito? Use um modelo gratuito
 
 O OpenRouter tem modelos com visão de graça, com slug terminado em `:free`:
@@ -222,7 +237,7 @@ XP viraria sorteio. O limite de um degrau mantém as duas pontas.
   fora do formato vira "item misterioso", não um erro na tela.
 - **Falha suave.** Sem internet, sem login ou com a função fora do ar, o app cai no provedor
   simulado — a demonstração nunca trava por causa da rede.
-- **O catálogo da função é gerado**, não copiado na mão: `npm run gen:catalogo` extrai os 36 itens
+- **O catálogo da função é gerado**, não copiado na mão: `npm run gen:edge` extrai os 36 itens
   de `src/domain/catalog.ts`. Rode depois de mexer no catálogo.
 
 ## Estrutura do projeto

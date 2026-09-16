@@ -12,6 +12,7 @@ import * as repo from '../db/lootRepo';
 import { catalogRarity, getCatalogEntry, CATALOG_SIZE } from '../domain/catalog';
 import { RARITIES, RARITY_ORDER } from '../domain/rarity';
 import { LootItem, RarityId } from '../domain/types';
+import { carregarModelo } from '../services/modeloIA';
 import { deletePhoto, persistPhoto } from '../services/photos';
 
 /** Bônus de XP concedido quando o item é devolvido ao dono. */
@@ -82,7 +83,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
     void (async () => {
       try {
-        const [stored, pending] = await Promise.all([repo.listItems(db), repo.countPending(db)]);
+        // O modelo de IA escolhido é lido junto: ele vive em memória depois disso,
+        // porque o serviço de visão não tem acesso à conexão do banco.
+        const [stored, pending] = await Promise.all([
+          repo.listItems(db),
+          repo.countPending(db),
+          carregarModelo(db),
+        ]);
         if (!active) return;
         setItems(stored);
         setPendingCount(pending);

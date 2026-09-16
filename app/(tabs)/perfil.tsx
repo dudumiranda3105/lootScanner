@@ -2,10 +2,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Notice, TextField } from '../../src/components/form';
+import { SeletorModelo } from '../../src/components/SeletorModelo';
 import { ICON } from '../../src/components/icons';
 import {
   Body,
@@ -22,6 +23,7 @@ import { CATALOG_SIZE } from '../../src/domain/catalog';
 import { RARITIES, RARITY_ORDER } from '../../src/domain/rarity';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useInventory } from '../../src/hooks/useInventory';
+import { definirModelo, modeloAtual } from '../../src/services/modeloIA';
 import { lastSyncAt, syncNow } from '../../src/services/sync';
 import { colors, font, glow, radius, spacing } from '../../src/theme/theme';
 
@@ -35,6 +37,8 @@ export default function PerfilScreen() {
   const [sincronizando, setSincronizando] = useState(false);
   const [ultimoSync, setUltimoSync] = useState<Date | null>(null);
   const [aviso, setAviso] = useState<{ tom: 'info' | 'error'; texto: string } | null>(null);
+  const [escolhendoModelo, setEscolhendoModelo] = useState(false);
+  const [modelo, setModelo] = useState(modeloAtual());
 
   useEffect(() => {
     setNome(profile?.hunterName ?? '');
@@ -169,9 +173,50 @@ export default function PerfilScreen() {
         </Card>
       </Animated.View>
 
+      {/* ---------------- identificacao ---------------- */}
+
+      <Animated.View entering={FadeInDown.delay(90).duration(300)}>
+        <Card style={styles.cartao}>
+          <View style={styles.tituloComIcone}>
+            <Icon name="robot-outline" size={15} color={colors.gold} />
+            <Label>Identificação automática</Label>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setEscolhendoModelo(true)}
+            style={({ pressed }) => [styles.escolhaModelo, pressed && styles.pressionado]}
+          >
+            <View style={styles.escolhaTextos}>
+              <Text style={styles.modeloNome}>{modelo.nome}</Text>
+              <Mono style={styles.modeloFornecedor}>
+                {modelo.fornecedor} · {modelo.gratuito ? 'grátis' : 'pago'}
+              </Mono>
+            </View>
+            <Icon name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Body style={styles.explicacao}>
+            É o modelo que olha a foto e diz que item é. Se errar muito ou atingir o limite diário,
+            escolha outro.
+          </Body>
+        </Card>
+      </Animated.View>
+
+      <SeletorModelo
+        visivel={escolhendoModelo}
+        selecionado={modelo.id}
+        onFechar={() => setEscolhendoModelo(false)}
+        onEscolher={async (escolhido) => {
+          setModelo(await definirModelo(db, escolhido.id));
+          setEscolhendoModelo(false);
+          setAviso({ tom: 'info', texto: `Agora identificando com ${escolhido.nome}.` });
+        }}
+      />
+
       {/* ---------------- conta ---------------- */}
 
-      <Animated.View entering={FadeInDown.delay(120).duration(300)}>
+      <Animated.View entering={FadeInDown.delay(150).duration(300)}>
         <Card style={styles.cartao}>
           <View style={styles.tituloComIcone}>
             <Icon name="account-circle-outline" size={15} color={colors.gold} />
@@ -377,5 +422,30 @@ const styles = StyleSheet.create({
   explicacao: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  escolhaModelo: {
+    alignItems: 'center',
+    backgroundColor: colors.bgElevated,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  pressionado: {
+    opacity: 0.7,
+  },
+  escolhaTextos: {
+    flex: 1,
+    gap: 2,
+  },
+  modeloNome: {
+    color: colors.text,
+    fontFamily: font.display,
+    fontSize: 16,
+  },
+  modeloFornecedor: {
+    fontSize: 11,
   },
 });

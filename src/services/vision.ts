@@ -1,5 +1,6 @@
 import { CATALOG, COLLECTIBLES, catalogRarity, getCatalogEntry } from '../domain/catalog';
 import { RarityId, VisionResult } from '../domain/types';
+import { modeloAtual } from './modeloIA';
 import { isSupabaseConfigured, requireSupabase } from './supabase';
 
 export interface VisionInput {
@@ -205,7 +206,12 @@ export const supabaseVisionProvider: VisionProvider = {
     const client = requireSupabase();
 
     const { data, error } = await client.functions.invoke('identificar-loot', {
-      body: { imagemBase64: input.base64, mimeType: 'image/jpeg' },
+      body: {
+        imagemBase64: input.base64,
+        mimeType: 'image/jpeg',
+        // A função só aceita ids da lista permitida; qualquer outro cai no padrão.
+        modelo: modeloAtual().id,
+      },
     });
 
     if (error) throw await detalharErro(error);
